@@ -14,8 +14,9 @@ interface ExpectedRow {
 }
 
 interface ExpectedSystemEvent {
-  kind: string;
   actorName: string;
+  addsCurrentUser?: boolean;
+  addedNames?: string[];
 }
 
 interface ExpectedBlock {
@@ -70,10 +71,17 @@ describe("Synthetic fixture suite", () => {
         renderConversation(fixture, container);
         const events = Array.from(
           container.querySelectorAll(".system-event__label"),
-        );
+        ).map((e) => e.textContent ?? "");
         expect(events.length).toBe(expected.systemEvents.length);
         expected.systemEvents.forEach((ev, i) => {
-          expect(events[i]?.textContent).toContain(ev.actorName);
+          expect(events[i]).toContain(ev.actorName);
+          expect(events[i]).toContain("added");
+          if (ev.addsCurrentUser) {
+            expect(events[i]).toContain("you");
+          }
+          for (const name of ev.addedNames ?? []) {
+            expect(events[i]).toContain(name);
+          }
         });
       });
 

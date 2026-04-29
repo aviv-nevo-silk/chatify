@@ -11,16 +11,23 @@ describe("renderConversation — system events", () => {
     document.body.appendChild(container);
   });
 
-  it("emits a 'forwarded by X' system event for the Sentara fixture", () => {
+  it("emits an inline 'Alex Gill added you' event before the last bubble in Sentara", () => {
     renderConversation(sentaraFixture as never, container);
-    const event = container.querySelector(".system-event__label");
-    expect(event?.textContent).toMatch(/Alex Gill/);
-    expect(event?.textContent).toMatch(/forwarded this thread to you/);
+    const events = container.querySelectorAll(".system-event__label");
+    // At least one event saying Alex added you
+    const aviv = Array.from(events).find((el) =>
+      /Alex Gill added you/.test(el.textContent ?? ""),
+    );
+    expect(aviv).toBeDefined();
   });
 
-  it("does NOT emit a forwarded event for a normal reply chain (gil-niv)", () => {
+  it("emits 'Zion Sarusi added Guy Lorman' inline in the gil-niv fixture", () => {
     renderConversation(gilNivFixture as never, container);
-    expect(container.querySelector(".system-event")).toBeNull();
+    const events = container.querySelectorAll(".system-event__label");
+    const guy = Array.from(events).find((el) =>
+      /Zion Sarusi added Guy Lorman/.test(el.textContent ?? ""),
+    );
+    expect(guy).toBeDefined();
   });
 
   it("preserves Alex's 'Thanks' bubble (the forward bug)", () => {

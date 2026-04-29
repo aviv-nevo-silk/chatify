@@ -31,8 +31,8 @@
   --radius-bubble: 18px;
   --radius-card: 12px;
   --radius-pill: 999px;
-  --bubble-max: 76%;
-  --chat-max: 800px;
+  --bubble-max: 82%;
+  --chat-max: 680px;
   --header-h: 56px;
 
   /* Shadows */
@@ -191,6 +191,22 @@ body {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
+/* The dropdown menu itself (options inside <select>) — by default the OS uses
+ * its own theme, which on light-mode-by-default systems shows white-on-white.
+ * Explicitly styling option/optgroup forces dark in Chrome/Firefox. */
+.dev-header__picker select option,
+.dev-header__picker select optgroup {
+  background: #0e1820;
+  color: var(--text-primary);
+  font: inherit;
+}
+
+.dev-header__picker select optgroup {
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: 0.3px;
+}
+
 .dev-header__status {
   margin-left: auto;
   color: var(--text-secondary);
@@ -225,8 +241,10 @@ body {
       transparent 60%
     ),
     var(--bg-app);
-  display: flex;
-  flex-direction: column;
+  /* Block container; children (rows, day-dividers, fixture sections) center
+   * via `margin: 0 auto`. Was previously `display: flex; flex-direction:
+   * column;` which interacted badly with auto margins and pinned the chat
+   * to the left edge of wide viewports. */
 }
 
 .chat-root > * {
@@ -251,6 +269,60 @@ body {
 .chat-root::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.16);
   background-clip: content-box;
+}
+
+/* ---- Fixture section headers (only used in 'All fixtures' view) ----- */
+
+.fixture-section {
+  margin: 28px 0 12px;
+  padding: 14px 18px;
+  border-radius: var(--radius-card);
+  background: linear-gradient(
+    180deg,
+    rgba(37, 211, 102, 0.07),
+    rgba(37, 211, 102, 0.01)
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, var(--border-soft));
+  border-inline-start: 3px solid var(--accent);
+  box-shadow: 0 0 18px rgba(37, 211, 102, 0.06);
+}
+
+.fixture-section:first-child {
+  margin-top: 4px;
+}
+
+.fixture-section__title {
+  font-size: 14.5px;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+  color: var(--text-primary);
+}
+
+.fixture-section__sub {
+  font-size: 11.5px;
+  color: var(--accent);
+  margin-top: 2px;
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.fixture-section__desc {
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  margin-top: 6px;
+  line-height: 1.5;
+}
+
+.fixture-section--error {
+  background: rgba(255, 123, 107, 0.08);
+  border-color: rgba(255, 123, 107, 0.4);
+  border-inline-start-color: var(--accent-warn);
+  color: var(--accent-warn);
+}
+
+.fixture-section__chat {
+  display: flex;
+  flex-direction: column;
 }
 
 /* ---- System events — "X forwarded this thread to you" ---------------- */

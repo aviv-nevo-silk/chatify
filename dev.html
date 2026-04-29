@@ -35,8 +35,17 @@
         <span class="dev-header__picker-label">Fixture</span>
         <select id="fixture-picker">
           <option value="">— pick a fixture —</option>
-          <option value="gil-niv-mixed-hebrew">Gil Niv · mixed Hebrew (6 msgs)</option>
-          <option value="sentara-forward">Sentara forward (1 msg)</option>
+          <option value="__all__">⭐ All fixtures (stacked)</option>
+          <optgroup label="Real (from inbox — gitignored)">
+            <option value="gil-niv-mixed-hebrew">Gil Niv · mixed Hebrew (6 msgs)</option>
+            <option value="sentara-forward">Sentara forward (7 bubbles after expansion)</option>
+            <option value="missing-elastic-data">Missing elastic data (deep 11-msg chain)</option>
+          </optgroup>
+          <optgroup label="Synthetic (committed, used in tests)">
+            <option value="synthetic/forward-chain">Forward chain (4-deep support thread)</option>
+            <option value="synthetic/mixed-language">Mixed-language (RTL + mention pill)</option>
+            <option value="synthetic/attachment-heavy">Attachment-heavy (PDF + image + CID)</option>
+          </optgroup>
         </select>
       </label>
       <span id="dev-status" class="dev-header__status"></span>

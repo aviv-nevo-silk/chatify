@@ -90,7 +90,9 @@
     }
   ],
   "expected": {
-    "systemEvents": [],
+    "systemEvents": [
+      { "actorName": "Yossi Bar", "addedNames": ["Lior Ben-Ami"] }
+    ],
     "rowCount": 5,
     "rowsInOrder": [
       { "senderName": "Yossi Bar", "isOut": false, "isRtl": true, "contains": "הבילד נכשל" },

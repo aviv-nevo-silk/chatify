@@ -24,6 +24,7 @@
 import type {
   AttachmentRef,
   Conversation,
+  EmailAddress,
   Message,
 } from "./types.js";
 import { senderColor } from "./utils/color.js";
@@ -47,13 +48,6 @@ export function renderConversation(
 ): void {
   container.replaceChildren();
 
-  // Detect "forwarded to you" events at conversation level, before any
-  // expansion happens. These render as system-event lines at the top of the
-  // chat (analogous to "X added you to the group" in WhatsApp/Slack).
-  for (const ev of computeSystemEvents(conversation)) {
-    container.appendChild(buildSystemEvent(ev));
-  }
-
   // Expand each Graph message into virtual sub-messages by parsing forwarded
   // chains in its body. A single Graph message containing a deeply-nested
   // forward becomes N bubbles instead of one giant text dump.
@@ -66,6 +60,11 @@ export function renderConversation(
   const today = new Date();
   let prevDate: Date | null = null;
   const currentUserAddr = conversation.currentUser.address.toLowerCase();
+  // Walk through messages chronologically and track who has been a participant
+  // so far. Whenever a message brings in a new recipient, emit an inline
+  // "X added Y to the conversation" event right before the bubble — same
+  // metaphor as "added to group" in WhatsApp/Slack.
+  const knownParticipants = new Set<string>();
 
   for (const message of sorted) {
     const sentAt = new Date(message.sentDateTime);
@@ -75,46 +74,76 @@ export function renderConversation(
     }
     prevDate = sentAt;
 
+    if (knownParticipants.size > 0) {
+      const newPeople = newRecipients(message, knownParticipants);
+      if (newPeople.length > 0) {
+        container.appendChild(
+          buildAddedEvent(message.sender.name, newPeople, currentUserAddr),
+        );
+      }
+    }
+    addParticipants(message, knownParticipants);
+
     container.appendChild(buildRow(message, currentUserAddr, sentAt));
   }
 }
 
 // ----- system events ------------------------------------------------------
+//
+// Inline "added to the conversation" events. A message brings new people in
+// when its to/cc list contains addresses that haven't appeared in any prior
+// message's sender or recipients. The event is rendered as a chip right
+// before that message's bubble.
 
-interface SystemEvent {
-  kind: "forwarded";
-  actorName: string;
-  date: Date;
-}
-
-function computeSystemEvents(conversation: Conversation): SystemEvent[] {
-  const events: SystemEvent[] = [];
-  const target = conversation.currentUser.address.toLowerCase();
-  for (const m of conversation.messages) {
-    const expanded = expandForwardedChain(m);
-    if (expanded.length <= 1) continue;
-    const recipientMatch = [...m.toRecipients, ...m.ccRecipients].some(
-      (r) => r.address.toLowerCase() === target,
-    );
-    if (!recipientMatch) continue;
-    if (m.sender.address.toLowerCase() === target) continue;
-    events.push({
-      kind: "forwarded",
-      actorName: m.sender.name,
-      date: new Date(m.sentDateTime),
-    });
+function newRecipients(
+  message: Message,
+  known: Set<string>,
+): EmailAddress[] {
+  const out: EmailAddress[] = [];
+  const seen = new Set<string>();
+  for (const r of [...message.toRecipients, ...message.ccRecipients]) {
+    const addr = r.address.toLowerCase();
+    if (known.has(addr)) continue;
+    if (seen.has(addr)) continue;
+    seen.add(addr);
+    out.push(r);
   }
-  return events;
+  return out;
 }
 
-function buildSystemEvent(ev: SystemEvent): HTMLElement {
+function addParticipants(message: Message, known: Set<string>): void {
+  known.add(message.sender.address.toLowerCase());
+  for (const r of [...message.toRecipients, ...message.ccRecipients]) {
+    known.add(r.address.toLowerCase());
+  }
+}
+
+function buildAddedEvent(
+  actorName: string,
+  newPeople: EmailAddress[],
+  currentUserAddr: string,
+): HTMLElement {
   const wrapper = document.createElement("div");
   wrapper.className = "system-event";
   const label = document.createElement("span");
   label.className = "system-event__label";
-  label.textContent = `↗ ${ev.actorName} forwarded this thread to you`;
+  label.textContent = `↗ ${actorName} added ${formatAddedNames(newPeople, currentUserAddr)} to the conversation`;
   wrapper.appendChild(label);
   return wrapper;
+}
+
+function formatAddedNames(
+  people: EmailAddress[],
+  currentUserAddr: string,
+): string {
+  // "you" if current user is in the set; mention by name otherwise.
+  // Multiple people: "you, Marc, Sandra" or "Marc and Sandra".
+  const tokens = people.map((p) =>
+    p.address.toLowerCase() === currentUserAddr ? "you" : p.name,
+  );
+  if (tokens.length === 1) return tokens[0]!;
+  if (tokens.length === 2) return `${tokens[0]} and ${tokens[1]}`;
+  return `${tokens.slice(0, -1).join(", ")}, and ${tokens[tokens.length - 1]}`;
 }
 
 // ----- builders -----------------------------------------------------------

@@ -24,7 +24,7 @@
   ],
   "expected": {
     "systemEvents": [
-      { "kind": "forwarded", "actorName": "Robin Lee" }
+      { "actorName": "Robin Lee", "addsCurrentUser": true }
     ],
     "rowCount": 4,
     "rowsInOrder": [

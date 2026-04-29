@@ -16,7 +16,13 @@
 
 import type { EmailAddress, Message } from "../types.js";
 
-const HR_SPLIT_RE = /<hr\s*\/?>/i;
+// Outlook serializes forwarded headers as a <p> or <div> that begins with
+// `<b>From:</b>` followed soon after by `<b>Sent:</b>` and `<b>Subject:</b>`.
+// The boundary BEFORE such a header may be `<hr/>` (most common) OR a styled
+// `<div style="border:none;border-top:solid #E1E1E1 1.0pt;...">` block, OR
+// nothing at all. Splitting on the header itself handles all three cases.
+const HEADER_BOUNDARY_RE =
+  /<(?:p|div)\b[^>]*>(?:\s*<[^>]+>)*\s*<b>\s*From:\s*<\/b>/gi;
 const FROM_RE = /<b>\s*From:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SENT_RE = /<b>\s*Sent:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SUBJECT_RE = /<b>\s*Subject:\s*<\/b>\s*([\s\S]+?)(?:\s*<br|\s*<\/p>)/i;
@@ -28,10 +34,7 @@ const SUBJECT_RE = /<b>\s*Subject:\s*<\/b>\s*([\s\S]+?)(?:\s*<br|\s*<\/p>)/i;
  */
 export function expandForwardedChain(message: Message): Message[] {
   const html = message.body.content;
-  const segments = html
-    .split(HR_SPLIT_RE)
-    .map((s) => s.trim())
-    .filter((s) => s.length > 0);
+  const segments = splitByForwardedHeaders(html);
 
   if (segments.length <= 1) return [message];
 
@@ -80,6 +83,46 @@ function consolidateAddresses(messages: Message[]): void {
       if (real) m.sender = { ...m.sender, address: real };
     }
   }
+}
+
+function splitByForwardedHeaders(html: string): string[] {
+  // Find every position where a <p>/<div> opens and the first content inside
+  // is a `<b>From:</b>` marker. Each such position is the START of a
+  // forwarded segment. Everything before the first one is the new content.
+  const positions: number[] = [];
+  HEADER_BOUNDARY_RE.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = HEADER_BOUNDARY_RE.exec(html)) !== null) {
+    positions.push(m.index);
+  }
+  if (positions.length === 0) {
+    const trimmed = html.trim();
+    return trimmed ? [trimmed] : [];
+  }
+  const segments: string[] = [];
+  // Segment 0: the original new content, before the first forwarded header.
+  segments.push(stripTrailingSeparators(html.slice(0, positions[0])));
+  // Each forwarded segment runs from its header start to the next header start (or EOF).
+  for (let i = 0; i < positions.length; i++) {
+    const start = positions[i]!;
+    const end = positions[i + 1] ?? html.length;
+    segments.push(stripTrailingSeparators(html.slice(start, end)));
+  }
+  return segments.filter((s) => s.length > 0);
+}
+
+function stripTrailingSeparators(html: string): string {
+  // Trailing <hr/> (or a div wrapping just an <hr/>) belongs to the boundary
+  // between forwards, not the content of either side. Removing them ensures
+  // the signature stripper can walk into the real last paragraph of a segment.
+  let s = html.trim();
+  for (;;) {
+    const before = s.length;
+    s = s.replace(/<hr\s*\/?>\s*$/i, "").trimEnd();
+    s = s.replace(/<div\b[^>]*>\s*<hr\s*\/?>\s*<\/div>\s*$/i, "").trimEnd();
+    if (s.length === before) break;
+  }
+  return s;
 }
 
 function parseForwardedSegment(

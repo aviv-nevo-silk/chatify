@@ -1,12 +1,15 @@
 // Dev page entry. Picks a fixture from the dropdown (or `?fixture=` query
 // param / localStorage on load), fetches it from `/tests/fixtures/<name>.json`,
-// and feeds it into the renderer. Vite's `server.fs.allow: [".."]` lets the
-// HTTP layer reach `tests/` even though it sits outside the web root.
+// and feeds it into the renderer.
+//
+// Special value "__all__" renders every fixture in the dropdown stacked,
+// each preceded by a section header — useful for visual review.
 
 import type { Conversation } from "./types.js";
 import { renderConversation } from "./renderer.js";
 
 const STORAGE_KEY = "chatify.lastFixture";
+const ALL_VALUE = "__all__";
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -17,22 +20,71 @@ function $<T extends HTMLElement>(id: string): T {
 function setStatus(text: string, isError = false): void {
   const status = $("dev-status");
   status.textContent = text;
-  status.style.color = isError ? "#ff6b6b" : "";
+  if (isError) status.dataset.state = "error";
+  else delete status.dataset.state;
+}
+
+function fixtureUrl(name: string): string {
+  return `/tests/fixtures/${name}.json`;
+}
+
+async function fetchFixture(name: string): Promise<Conversation> {
+  const res = await fetch(fixtureUrl(name), { cache: "no-cache" });
+  if (!res.ok) {
+    throw new Error(`HTTP ${res.status} loading ${name}`);
+  }
+  return (await res.json()) as Conversation;
+}
+
+function buildSectionHeader(label: string, conv: Conversation): HTMLElement {
+  const header = document.createElement("div");
+  header.className = "fixture-section";
+  const title = document.createElement("div");
+  title.className = "fixture-section__title";
+  title.textContent = label;
+  const sub = document.createElement("div");
+  sub.className = "fixture-section__sub";
+  // Sub text is set later (post-render) once we know the actual bubble count.
+  sub.textContent = `as ${conv.currentUser.name}`;
+  header.appendChild(title);
+  header.appendChild(sub);
+  if (conv.description) {
+    const desc = document.createElement("div");
+    desc.className = "fixture-section__desc";
+    desc.textContent = conv.description;
+    header.appendChild(desc);
+  }
+  return header;
+}
+
+function describeRenderedCounts(conv: Conversation, slot: HTMLElement): string {
+  const bubbles = slot.querySelectorAll(".row").length;
+  const original = conv.messages.length;
+  const bubbleLabel = `${bubbles} bubble${bubbles === 1 ? "" : "s"}`;
+  // Show the Graph-message count when expansion happened (forwarded chains).
+  const expansionTag =
+    bubbles > original ? ` · expanded from ${original} email${original === 1 ? "" : "s"}` : "";
+  return `${bubbleLabel}${expansionTag} · as ${conv.currentUser.name}`;
 }
 
 async function loadFixture(name: string): Promise<void> {
   const root = $<HTMLElement>("chat-root");
-  const url = `/tests/fixtures/${encodeURIComponent(name)}.json`;
   setStatus(`Loading ${name}…`);
   try {
-    const res = await fetch(url, { cache: "no-cache" });
-    if (!res.ok) {
-      throw new Error(`HTTP ${res.status} loading ${url}`);
+    if (name === ALL_VALUE) {
+      await renderAll(root);
+      return;
     }
-    const conv = (await res.json()) as Conversation;
+    const conv = await fetchFixture(name);
+    root.replaceChildren();
     renderConversation(conv, root);
-    const count = conv.messages.length;
-    setStatus(`${count} message${count === 1 ? "" : "s"} · ${name}`);
+    const bubbles = root.querySelectorAll(".row").length;
+    const original = conv.messages.length;
+    const expansionTag =
+      bubbles > original ? ` (expanded from ${original})` : "";
+    setStatus(
+      `${bubbles} bubble${bubbles === 1 ? "" : "s"}${expansionTag} · ${name}`,
+    );
     localStorage.setItem(STORAGE_KEY, name);
     syncUrl(name);
   } catch (err) {
@@ -40,6 +92,52 @@ async function loadFixture(name: string): Promise<void> {
     setStatus(`Error: ${message}`, true);
     root.replaceChildren();
   }
+}
+
+async function renderAll(root: HTMLElement): Promise<void> {
+  const picker = $<HTMLSelectElement>("fixture-picker");
+  const names: string[] = [];
+  for (const opt of Array.from(picker.options)) {
+    if (opt.value && opt.value !== ALL_VALUE) names.push(opt.value);
+  }
+
+  setStatus(`Loading ${names.length} fixtures…`);
+  root.replaceChildren();
+
+  const results = await Promise.allSettled(names.map(fetchFixture));
+
+  let totalBubbles = 0;
+  results.forEach((res, i) => {
+    const name = names[i]!;
+    if (res.status === "rejected") {
+      const err = document.createElement("div");
+      err.className = "fixture-section fixture-section--error";
+      err.textContent = `${name} — failed to load (${res.reason})`;
+      root.appendChild(err);
+      return;
+    }
+    const conv = res.value;
+    const labelOpt = Array.from(picker.options).find((o) => o.value === name);
+    const label = labelOpt?.textContent?.trim() ?? name;
+    const sectionHeader = buildSectionHeader(label, conv);
+    root.appendChild(sectionHeader);
+
+    const slot = document.createElement("div");
+    slot.className = "fixture-section__chat";
+    root.appendChild(slot);
+    renderConversation(conv, slot);
+
+    // Update the section sub-text now that we know the rendered bubble count.
+    // For a 1-Graph-message Sentara forward this becomes "7 bubbles · expanded from 1 email · as Aviv".
+    const sub = sectionHeader.querySelector(".fixture-section__sub");
+    if (sub) sub.textContent = describeRenderedCounts(conv, slot);
+
+    totalBubbles += slot.querySelectorAll(".row").length;
+  });
+
+  setStatus(`${results.length} fixtures · ${totalBubbles} bubbles total`);
+  localStorage.setItem(STORAGE_KEY, ALL_VALUE);
+  syncUrl(ALL_VALUE);
 }
 
 function syncUrl(name: string): void {
@@ -50,7 +148,6 @@ function syncUrl(name: string): void {
 }
 
 function pickInitialFixture(picker: HTMLSelectElement): string | null {
-  // Priority: ?fixture= query param > localStorage > nothing.
   const params = new URLSearchParams(window.location.search);
   const queryName = params.get("fixture");
   if (queryName && hasOption(picker, queryName)) return queryName;
