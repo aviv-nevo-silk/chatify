@@ -1,0 +1,11 @@
+node_modules/
+dist/
+.env
+.env.local
+*.pem
+*.key
+
+# Real email fixtures — NEVER commit
+tests/fixtures/*.json
+!tests/fixtures/*.sanitized.json
+!tests/fixtures/README.md
