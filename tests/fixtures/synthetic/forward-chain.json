@@ -24,6 +24,7 @@
   ],
   "expected": {
     "systemEvents": [
+      { "actorName": "Sam Patel", "addedNames": ["Robin Lee"] },
       { "actorName": "Robin Lee", "addsCurrentUser": true }
     ],
     "rowCount": 4,

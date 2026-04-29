@@ -99,8 +99,11 @@ function newRecipients(
   message: Message,
   known: Set<string>,
 ): EmailAddress[] {
+  const senderAddr = message.sender.address.toLowerCase();
   const out: EmailAddress[] = [];
-  const seen = new Set<string>();
+  // Pre-seed `seen` with the sender so a message that includes its own
+  // sender in to/cc doesn't produce an "X added X" self-event.
+  const seen = new Set<string>([senderAddr]);
   for (const r of [...message.toRecipients, ...message.ccRecipients]) {
     const addr = r.address.toLowerCase();
     if (known.has(addr)) continue;

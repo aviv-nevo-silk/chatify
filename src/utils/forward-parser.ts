@@ -30,6 +30,8 @@ const HEADER_BOUNDARY_RE =
   /<(?:p|div)\b[^>]*>(?:\s*<(?!\/)[^>]+>)*\s*<b>\s*From:\s*<\/b>/gi;
 const FROM_RE = /<b>\s*From:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SENT_RE = /<b>\s*Sent:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
+const TO_RE = /<b>\s*To:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
+const CC_RE = /<b>\s*Cc:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SUBJECT_RE = /<b>\s*Subject:\s*<\/b>\s*([\s\S]+?)(?:\s*<br|\s*<\/p>)/i;
 
 /**
@@ -76,17 +78,30 @@ export function expandForwardedChain(message: Message): Message[] {
 }
 
 function consolidateAddresses(messages: Message[]): void {
+  // Build name -> real-address map from any address that isn't synthesized.
+  // Sender + recipients all contribute.
   const nameToReal = new Map<string, string>();
-  for (const m of messages) {
-    if (!m.sender.address.endsWith("@unknown.local")) {
-      nameToReal.set(m.sender.name.toLowerCase(), m.sender.address);
+  const harvest = (a: EmailAddress) => {
+    if (!a.address.endsWith("@unknown.local") && a.name) {
+      const key = a.name.toLowerCase();
+      if (!nameToReal.has(key)) nameToReal.set(key, a.address);
     }
+  };
+  for (const m of messages) {
+    harvest(m.sender);
+    m.toRecipients.forEach(harvest);
+    m.ccRecipients.forEach(harvest);
   }
+  // Apply: rewrite any synthesized address that has a known real one.
+  const swap = (a: EmailAddress): EmailAddress => {
+    if (!a.address.endsWith("@unknown.local")) return a;
+    const real = nameToReal.get(a.name.toLowerCase());
+    return real ? { ...a, address: real } : a;
+  };
   for (const m of messages) {
-    if (m.sender.address.endsWith("@unknown.local")) {
-      const real = nameToReal.get(m.sender.name.toLowerCase());
-      if (real) m.sender = { ...m.sender, address: real };
-    }
+    m.sender = swap(m.sender);
+    m.toRecipients = m.toRecipients.map(swap);
+    m.ccRecipients = m.ccRecipients.map(swap);
   }
 }
 
@@ -159,7 +174,11 @@ function parseForwardedSegment(
   if (!sentDateTime) return null;
 
   const subjectMatch = headerHtml.match(SUBJECT_RE);
+  const toMatch = headerHtml.match(TO_RE);
+  const ccMatch = headerHtml.match(CC_RE);
   const sender = parseEmailAddress(fromMatch[1] ?? "");
+  const toRecipients = toMatch ? parseRecipientList(toMatch[1] ?? "") : [];
+  const ccRecipients = ccMatch ? parseRecipientList(ccMatch[1] ?? "") : [];
 
   const bodyHtml = extractContentAfter(headerEl, root);
 
@@ -170,13 +189,26 @@ function parseForwardedSegment(
       ? decodeEntities(subjectMatch[1] ?? "").trim()
       : parent.subject,
     sender,
-    toRecipients: [],
-    ccRecipients: [],
+    toRecipients,
+    ccRecipients,
     sentDateTime,
     receivedDateTime: sentDateTime,
     hasAttachments: false,
     body: { contentType: "html", content: bodyHtml },
   };
+}
+
+function parseRecipientList(text: string): EmailAddress[] {
+  // Strip HTML, decode entities, split on `;`, parse each entry as
+  // "Name <email>". Drops empties and entries that aren't email-like.
+  const cleaned = decodeEntities(text.replace(/<[^>]*>/g, "")).trim();
+  if (!cleaned) return [];
+  return cleaned
+    .split(";")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => parseEmailAddress(s))
+    .filter((a) => a.address && !a.address.startsWith("@"));
 }
 
 /**
@@ -227,15 +259,19 @@ function collectFollowingSiblings(node: Element, parts: string[]): void {
 }
 
 function parseEmailAddress(text: string): EmailAddress {
-  const decoded = decodeEntities(text.trim()).replace(/\s+/g, " ");
-  const angleMatch = decoded.match(/^(.+?)\s*<([^>]+)>$/);
+  // Outlook wraps emails in <a href="mailto:...">email</a> inside the
+  // <Name <email>> form. Strip HTML before pattern-matching so the angle-
+  // bracket regex sees `Name <email>` not `Name <<a href...>email</a>>`.
+  const stripped = text.replace(/<[^>]*>/g, "");
+  const decoded = decodeEntities(stripped.trim()).replace(/\s+/g, " ");
+  const angleMatch = decoded.match(/^(.+?)\s*<([^>]+)>\s*$/);
   if (angleMatch) {
     return {
       name: angleMatch[1]!.trim(),
       address: angleMatch[2]!.trim().toLowerCase(),
     };
   }
-  if (decoded.includes("@")) {
+  if (decoded.includes("@") && !decoded.includes(" ")) {
     return { name: decoded, address: decoded.toLowerCase() };
   }
   const slug = decoded
