@@ -7,6 +7,11 @@ if [ ! -f cert.pem ] || [ ! -f key.pem ]; then
     -subj "/C=US/ST=State/L=City/O=Chatify/CN=localhost"
 fi
 
+if [ ! -x node_modules/.bin/vite ]; then
+  echo "Installing dependencies (vite missing — likely host/container arch mismatch)..."
+  npm install --no-audit --no-fund
+fi
+
 echo "Chatify dev server starting on https://localhost:3001 (mapped from container :3000)"
 echo "  - dev page:  https://localhost:3001/dev.html"
 echo "  - taskpane:  https://localhost:3001/taskpane.html"

@@ -36,6 +36,7 @@ import {
   humanSize,
 } from "./utils/attachments.js";
 import { formatDayDivider, formatBubbleTime, sameDay } from "./utils/dates.js";
+import { expandForwardedChain } from "./utils/forward-parser.js";
 
 const MAX_FILENAME_DISPLAY = 40;
 
@@ -45,7 +46,11 @@ export function renderConversation(
 ): void {
   container.replaceChildren();
 
-  const sorted = [...conversation.messages].sort(
+  // Expand each Graph message into virtual sub-messages by parsing forwarded
+  // chains in its body. A single Graph message containing a deeply-nested
+  // forward becomes N bubbles instead of one giant text dump.
+  const expanded = conversation.messages.flatMap(expandForwardedChain);
+  const sorted = expanded.sort(
     (a, b) =>
       new Date(a.sentDateTime).getTime() - new Date(b.sentDateTime).getTime(),
   );

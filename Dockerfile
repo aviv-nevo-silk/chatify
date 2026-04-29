@@ -1,11 +1,11 @@
-FROM node:20-alpine
+FROM node:20-bookworm-slim
 
 WORKDIR /app
 
-RUN apk add --no-cache openssl
+RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -rf /var/lib/apt/lists/*
 
-COPY package.json ./
-RUN npm install
+COPY package.json package-lock.json* ./
+RUN npm install --no-audit --no-fund
 
 COPY . .
 RUN chmod +x /app/start.sh

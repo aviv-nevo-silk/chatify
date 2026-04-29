@@ -1,35 +1,51 @@
-/* Chatify — WhatsApp dark theme.
+/* Chatify — modern dark theme.
  * One stylesheet for the dev page (dev.html) and the future Outlook task pane
  * (taskpane.html). Class-name contract is documented in src/renderer.ts.
  */
 
 :root {
-  /* Color tokens */
-  --bg-app: #0b141a;
-  --bg-panel: #111b21;
-  --bg-header: #202c33;
-  --bg-bubble-in: #202c33;
-  --bg-bubble-out: #005c4b;
-  --bg-divider: #1d282f;
+  /* Surface palette — tuned away from pure WhatsApp toward a slightly cooler,
+     more modern dark with a hint of blue. */
+  --bg-app: #07101a;
+  --bg-elev-1: rgba(255, 255, 255, 0.03);
+  --bg-elev-2: rgba(255, 255, 255, 0.06);
+  --border-soft: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+
+  --bg-bubble-in: linear-gradient(160deg, #1d2a33 0%, #182229 100%);
+  --bg-bubble-out: linear-gradient(160deg, #0a8569 0%, #03634d 100%);
+  --bg-divider: rgba(255, 255, 255, 0.05);
   --bg-attachment: rgba(255, 255, 255, 0.04);
-  --border-soft: rgba(255, 255, 255, 0.06);
 
   --text-primary: #e9edef;
-  --text-secondary: #8696a0;
+  --text-secondary: #9bb0bd;
   --text-meta: rgba(233, 237, 239, 0.55);
+  --text-muted: rgba(233, 237, 239, 0.4);
+
   --accent: #25d366;
-  --accent-link: #53bdeb;
+  --accent-soft: #34e07b;
+  --accent-link: #6cc6f0;
+  --accent-warn: #ff7b6b;
 
   /* Geometry */
-  --radius-bubble: 8px;
+  --radius-bubble: 18px;
+  --radius-card: 12px;
   --radius-pill: 999px;
-  --bubble-max: 78%;
-  --chat-max: 780px;
-  --header-h: 52px;
+  --bubble-max: 76%;
+  --chat-max: 800px;
+  --header-h: 56px;
+
+  /* Shadows */
+  --shadow-bubble: 0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.04) inset;
+  --shadow-bubble-hover: 0 4px 18px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset;
+  --shadow-glow: 0 0 24px rgba(37, 211, 102, 0.18);
 
   /* Typography */
-  --font-stack: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
-    "Noto Sans Hebrew", Arial, sans-serif;
+  --font-stack: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", "Noto Sans Hebrew", system-ui, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 }
 
 * {
@@ -44,7 +60,10 @@ body {
   background: var(--bg-app);
   color: var(--text-primary);
   font-family: var(--font-stack);
+  font-feature-settings: "ss01", "cv01", "cv11";
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
 /* ---- Dev-page chrome (only shown on dev.html) ------------------------- */
@@ -55,74 +74,159 @@ body {
 }
 
 .dev-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: 18px;
   height: var(--header-h);
-  padding: 0 16px;
-  background: var(--bg-header);
+  padding: 0 18px;
+  background: rgba(15, 23, 31, 0.68);
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
   border-bottom: 1px solid var(--border-soft);
   font-size: 13px;
 }
 
+.dev-header::after {
+  /* Subtle accent glow under header */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(37, 211, 102, 0.35),
+    transparent
+  );
+  opacity: 0.4;
+}
+
 .dev-header__brand {
-  font-weight: 600;
-  letter-spacing: 0.2px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   color: var(--text-primary);
 }
 
-.dev-header__brand::before {
-  content: "💬";
-  margin-right: 8px;
-  filter: saturate(1.1);
+.dev-header__logo {
+  flex-shrink: 0;
+  filter: drop-shadow(0 0 8px rgba(37, 211, 102, 0.3));
+}
+
+.dev-header__wordmark {
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -0.45px;
+  background: linear-gradient(
+    135deg,
+    #ffffff 25%,
+    var(--accent-soft) 95%,
+    var(--accent) 100%
+  );
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.dev-header__tag {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+  padding: 2px 6px 1px;
+  border-radius: 5px;
+  align-self: center;
 }
 
 .dev-header__picker {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   color: var(--text-secondary);
+  font-size: 12.5px;
+  margin-left: 14px;
+}
+
+.dev-header__picker-label {
+  text-transform: uppercase;
+  font-size: 10.5px;
+  letter-spacing: 0.8px;
+  color: var(--text-muted);
+  font-weight: 600;
 }
 
 .dev-header__picker select {
-  background: var(--bg-app);
+  background: var(--bg-elev-1);
   color: var(--text-primary);
   border: 1px solid var(--border-soft);
-  border-radius: 6px;
-  padding: 6px 10px;
+  border-radius: 8px;
+  padding: 6px 28px 6px 11px;
   font: inherit;
+  font-size: 12.5px;
   cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%239bb0bd' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  transition: border-color 120ms ease, background-color 120ms ease;
+}
+
+.dev-header__picker select:hover {
+  border-color: var(--border-strong);
+  background-color: var(--bg-elev-2);
 }
 
 .dev-header__picker select:focus {
-  outline: 2px solid var(--accent);
-  outline-offset: 1px;
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
 }
 
 .dev-header__status {
   margin-left: auto;
   color: var(--text-secondary);
   font-size: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .dev-header__status[data-state="error"] {
-  color: #ff6b6b;
+  color: var(--accent-warn);
 }
 
-/* ---- Chat root --------------------------------------------------------- */
+/* ---- Chat root with mesh-gradient background ------------------------- */
 
 .chat-root {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 12px 28px;
+  padding: 18px 14px 32px;
   background:
-    radial-gradient(circle at 18% 8%, rgba(37, 211, 102, 0.045), transparent 42%),
-    radial-gradient(circle at 82% 84%, rgba(106, 76, 255, 0.05), transparent 42%),
+    radial-gradient(
+      ellipse at 12% 0%,
+      rgba(37, 211, 102, 0.07),
+      transparent 45%
+    ),
+    radial-gradient(
+      ellipse at 88% 18%,
+      rgba(106, 76, 255, 0.08),
+      transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 50% 100%,
+      rgba(0, 152, 255, 0.05),
+      transparent 60%
+    ),
     var(--bg-app);
-  /* Center the conversation when the viewport is wide. */
   display: flex;
   flex-direction: column;
-  align-items: stretch;
 }
 
 .chat-root > * {
@@ -132,29 +236,78 @@ body {
   margin-right: auto;
 }
 
-/* ---- Day divider ------------------------------------------------------- */
+.chat-root::-webkit-scrollbar {
+  width: 10px;
+}
+.chat-root::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-root::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.chat-root::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.16);
+  background-clip: content-box;
+}
+
+/* ---- Day divider — refined chip with side lines ----------------------- */
 
 .day-divider {
   display: flex;
-  justify-content: center;
-  margin: 14px 0 8px;
+  align-items: center;
+  gap: 14px;
+  margin: 18px 4px 10px;
+}
+
+.day-divider::before,
+.day-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.08),
+    transparent
+  );
 }
 
 .day-divider span {
   background: var(--bg-divider);
   color: var(--text-secondary);
-  font-size: 12px;
-  letter-spacing: 0.2px;
-  padding: 5px 12px;
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  padding: 5px 14px;
   border-radius: var(--radius-pill);
-  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.2);
+  border: 1px solid var(--border-soft);
 }
 
 /* ---- Rows -------------------------------------------------------------- */
 
 .row {
   display: flex;
-  margin: 3px 0;
+  margin: 4px 0;
+  animation: chatify-fadeIn 220ms ease both;
+}
+
+.row + .row {
+  margin-top: 5px;
+}
+
+@keyframes chatify-fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .row--in {
@@ -165,7 +318,6 @@ body {
   justify-content: flex-end;
 }
 
-/* RTL applies to bubble content only — layout (left/right side) stays. */
 .row--rtl .bubble__content {
   direction: rtl;
   text-align: start;
@@ -177,38 +329,43 @@ body {
   position: relative;
   max-width: var(--bubble-max);
   min-width: 64px;
-  padding: 7px 10px 20px;
+  padding: 9px 13px 22px;
   border-radius: var(--radius-bubble);
   background: var(--bg-bubble-in);
-  box-shadow: 0 1px 0.5px rgba(0, 0, 0, 0.18);
+  box-shadow: var(--shadow-bubble);
   font-size: 14.5px;
-  line-height: 1.45;
+  line-height: 1.48;
   word-wrap: break-word;
   overflow-wrap: anywhere;
+  transition: box-shadow 180ms ease;
 }
 
-.row--in .bubble {
-  border-top-left-radius: 0;
+.bubble:hover {
+  box-shadow: var(--shadow-bubble-hover);
 }
 
 .row--out .bubble {
   background: var(--bg-bubble-out);
-  border-top-right-radius: 0;
+  box-shadow:
+    0 1px 2px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
+    0 0 0 1px rgba(37, 211, 102, 0.08);
 }
 
 .bubble__sender {
-  font-size: 12.5px;
+  font-size: 13px;
   font-weight: 600;
-  margin-bottom: 2px;
+  letter-spacing: 0.05px;
+  margin-bottom: 3px;
   color: var(--sender-color, var(--accent));
-  letter-spacing: 0.1px;
+  text-shadow: 0 0 12px color-mix(in srgb, var(--sender-color, var(--accent)) 30%, transparent);
 }
 
 /* ---- Bubble content (sanitized email HTML) ---------------------------- */
 
 .bubble__content {
   font-size: 14.5px;
-  line-height: 1.45;
+  line-height: 1.5;
   color: var(--text-primary);
 }
 
@@ -221,7 +378,7 @@ body {
 }
 
 .bubble__content p {
-  margin: 0 0 6px;
+  margin: 0 0 7px;
 }
 
 .bubble__content p:last-child {
@@ -230,7 +387,7 @@ body {
 
 .bubble__content ol,
 .bubble__content ul {
-  margin: 4px 0 6px;
+  margin: 4px 0 7px;
   padding-inline-start: 22px;
 }
 
@@ -238,73 +395,100 @@ body {
   margin: 2px 0;
 }
 
+.bubble__content li::marker {
+  color: var(--text-muted);
+}
+
 .bubble__content a {
   color: var(--accent-link);
   text-decoration: none;
-  border-bottom: 1px solid transparent;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent-link) 35%, transparent);
+  transition: border-color 120ms ease;
 }
 
 .bubble__content a:hover {
   border-bottom-color: var(--accent-link);
 }
 
+.row--out .bubble__content a {
+  color: #b8edff;
+  border-bottom-color: rgba(184, 237, 255, 0.4);
+}
+
 .bubble__content blockquote {
-  margin: 4px 0;
-  padding: 4px 10px;
-  border-inline-start: 3px solid var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
+  margin: 6px 0;
+  padding: 8px 12px;
+  border-inline-start: 3px solid var(--accent);
+  background: rgba(255, 255, 255, 0.04);
   color: var(--text-secondary);
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 6px 6px 0;
+  font-style: italic;
 }
 
 .bubble__content code,
 .bubble__content pre {
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 4px;
-  padding: 1px 5px;
-  font-family: "SF Mono", Menlo, Consolas, monospace;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid var(--border-soft);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-family: var(--font-mono);
   font-size: 13px;
 }
 
 .bubble__content pre {
-  padding: 8px 10px;
+  padding: 9px 12px;
   overflow-x: auto;
 }
 
-/* Mention pills (anchors with class="mention") ------------------------- */
+.bubble__content hr {
+  border: none;
+  height: 1px;
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--border-strong),
+    transparent
+  );
+  margin: 10px 0;
+}
+
+/* ---- Mention pills (anchors with class="mention") -------------------- */
 
 .bubble__content a.mention {
   --pill-color: var(--mention-color, var(--sender-color, var(--accent)));
   display: inline-block;
-  padding: 0 7px;
+  padding: 1px 9px;
   margin: 0 1px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--pill-color) 22%, transparent);
-  color: var(--pill-color);
-  font-weight: 500;
+  background: color-mix(in srgb, var(--pill-color) 24%, transparent);
+  color: color-mix(in srgb, var(--pill-color) 92%, white);
+  font-weight: 600;
   font-size: 13.5px;
   border: none;
   text-decoration: none;
   white-space: nowrap;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--pill-color) 32%, transparent) inset;
+  transition: background 120ms ease;
 }
 
 .bubble__content a.mention:hover {
-  background: color-mix(in srgb, var(--pill-color) 34%, transparent);
-  border: none;
+  background: color-mix(in srgb, var(--pill-color) 36%, transparent);
+  border-bottom: none;
 }
 
 /* ---- Inline images (CID-resolved) ------------------------------------- */
 
 .bubble__content .inline-image {
   display: block;
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .bubble__content .inline-image img {
   display: block;
   max-width: 100%;
   max-height: 400px;
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   background: var(--bg-divider);
 }
 
@@ -314,14 +498,19 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
-  margin-top: 6px;
+  margin-top: 8px;
 }
 
 .image-bubble {
-  border-radius: 6px;
+  border-radius: var(--radius-card);
   overflow: hidden;
   background: var(--bg-divider);
   cursor: zoom-in;
+  transition: transform 160ms ease;
+}
+
+.image-bubble:hover {
+  transform: scale(1.005);
 }
 
 .image-bubble img {
@@ -335,17 +524,19 @@ body {
 .attachment-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
+  gap: 11px;
+  padding: 9px 12px;
   background: var(--bg-attachment);
   border: 1px solid var(--border-soft);
-  border-radius: 8px;
+  border-radius: var(--radius-card);
   cursor: pointer;
-  transition: background 120ms ease;
+  transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
 }
 
 .attachment-card:hover {
-  background: rgba(255, 255, 255, 0.07);
+  background: var(--bg-elev-2);
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
 }
 
 .attachment-card__icon {
@@ -359,6 +550,7 @@ body {
   min-width: 0;
   color: var(--text-primary);
   font-size: 13.5px;
+  font-weight: 500;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -366,25 +558,23 @@ body {
 
 .attachment-card__size {
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: 11.5px;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 
 /* ---- Bubble meta (timestamp) ------------------------------------------ */
 
 .bubble__meta {
   position: absolute;
-  bottom: 4px;
-  inset-inline-end: 9px;
+  bottom: 5px;
+  inset-inline-end: 11px;
   font-size: 10.5px;
   color: var(--text-meta);
-  letter-spacing: 0.15px;
+  letter-spacing: 0.2px;
   pointer-events: none;
+  font-variant-numeric: tabular-nums;
 }
-
-/* The bubble pads bottom-right to leave room for .bubble__meta; for very
- * short bubbles the meta might overlap the last word. The 20px bottom-pad
- * + 36px reserved space for the timestamp prevent that in practice. */
 
 /* ---- Narrow viewport tweaks ------------------------------------------- */
 
@@ -399,13 +589,23 @@ body {
 
   .dev-header {
     flex-wrap: wrap;
-    gap: 8px;
+    gap: 10px;
     height: auto;
-    padding: 8px 12px;
+    padding: 10px 14px;
   }
 
   .dev-header__status {
     width: 100%;
     margin-left: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .row {
+    animation: none;
+  }
+
+  * {
+    transition: none !important;
   }
 }
