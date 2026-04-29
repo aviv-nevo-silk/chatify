@@ -54,23 +54,41 @@ export function stripSignature(html: string): string {
   if (!root) return html;
 
   // Walk children from the end. Stop at first non-signature element.
+  // After each removal, undo if we would empty the body — a one-liner like
+  // "Thanks" or "Best," IS the entire message, not a signature.
   while (root.lastElementChild) {
     const last = root.lastElementChild;
     if (!SIGNATURE_TAGS.has(last.tagName)) break;
     if (!isSignatureBlock(last)) break;
+    const nextSibling = last.nextSibling; // for re-insertion if we undo
     last.remove();
+    if (!hasMeaningfulContent(root)) {
+      // Restore at original position and stop.
+      if (nextSibling) {
+        root.insertBefore(last, nextSibling);
+      } else {
+        root.appendChild(last);
+      }
+      break;
+    }
   }
 
-  // Also drop trailing whitespace text nodes left behind.
+  // Also drop trailing whitespace text nodes left behind, but only if
+  // there's still real content remaining.
   while (
     root.lastChild &&
     root.lastChild.nodeType === Node.TEXT_NODE &&
     !(root.lastChild.textContent ?? "").trim()
   ) {
+    if (root.children.length === 0) break;
     root.removeChild(root.lastChild);
   }
 
   return root.innerHTML;
+}
+
+function hasMeaningfulContent(root: Element): boolean {
+  return root.children.length > 0 || (root.textContent ?? "").trim().length > 0;
 }
 
 function isSignatureBlock(el: Element): boolean {

@@ -72,6 +72,27 @@ describe("stripSignature", () => {
     expect(out).toContain(longBody);
   });
 
+  it("does NOT strip 'Thanks' when it is the entire body (no other content)", () => {
+    expect(stripSignature("<p>Thanks</p>")).toBe("<p>Thanks</p>");
+  });
+
+  it("does NOT strip 'Best,' when it is the entire body", () => {
+    expect(stripSignature("<p>Best,</p>")).toBe("<p>Best,</p>");
+  });
+
+  it("does NOT strip 'Best,<br/>Aviv' when it is the entire body", () => {
+    const html = "<p>Best,<br>Aviv</p>";
+    // jsdom may serialize <br> differently; accept either round-trip
+    const out = stripSignature(html);
+    expect(out).toMatch(/Best,/);
+    expect(out).toMatch(/Aviv/);
+  });
+
+  it("does NOT strip a single mobile-sig-only message", () => {
+    const html = "<p>Get Outlook for iOS</p>";
+    expect(stripSignature(html)).toBe(html);
+  });
+
   it("preserves a body when there is no signature", () => {
     const html =
       "<p>Hi</p><p>The following test run skip to monitor by user.</p><p>Any idea how to prevent flex moved the volume to detection</p>";

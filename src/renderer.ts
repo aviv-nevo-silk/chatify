@@ -47,6 +47,13 @@ export function renderConversation(
 ): void {
   container.replaceChildren();
 
+  // Detect "forwarded to you" events at conversation level, before any
+  // expansion happens. These render as system-event lines at the top of the
+  // chat (analogous to "X added you to the group" in WhatsApp/Slack).
+  for (const ev of computeSystemEvents(conversation)) {
+    container.appendChild(buildSystemEvent(ev));
+  }
+
   // Expand each Graph message into virtual sub-messages by parsing forwarded
   // chains in its body. A single Graph message containing a deeply-nested
   // forward becomes N bubbles instead of one giant text dump.
@@ -70,6 +77,44 @@ export function renderConversation(
 
     container.appendChild(buildRow(message, currentUserAddr, sentAt));
   }
+}
+
+// ----- system events ------------------------------------------------------
+
+interface SystemEvent {
+  kind: "forwarded";
+  actorName: string;
+  date: Date;
+}
+
+function computeSystemEvents(conversation: Conversation): SystemEvent[] {
+  const events: SystemEvent[] = [];
+  const target = conversation.currentUser.address.toLowerCase();
+  for (const m of conversation.messages) {
+    const expanded = expandForwardedChain(m);
+    if (expanded.length <= 1) continue;
+    const recipientMatch = [...m.toRecipients, ...m.ccRecipients].some(
+      (r) => r.address.toLowerCase() === target,
+    );
+    if (!recipientMatch) continue;
+    if (m.sender.address.toLowerCase() === target) continue;
+    events.push({
+      kind: "forwarded",
+      actorName: m.sender.name,
+      date: new Date(m.sentDateTime),
+    });
+  }
+  return events;
+}
+
+function buildSystemEvent(ev: SystemEvent): HTMLElement {
+  const wrapper = document.createElement("div");
+  wrapper.className = "system-event";
+  const label = document.createElement("span");
+  label.className = "system-event__label";
+  label.textContent = `↗ ${ev.actorName} forwarded this thread to you`;
+  wrapper.appendChild(label);
+  return wrapper;
 }
 
 // ----- builders -----------------------------------------------------------
