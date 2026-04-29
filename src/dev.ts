@@ -77,8 +77,26 @@ async function loadFixture(name: string): Promise<void> {
     }
     const conv = await fetchFixture(name);
     root.replaceChildren();
-    renderConversation(conv, root);
-    const bubbles = root.querySelectorAll(".row").length;
+
+    // Wrap single-fixture views in the same .fixture-section header + chat
+    // slot that the All-Fixtures view uses, so bubbles feel anchored within
+    // a centered card instead of drifting against the left edge of an
+    // unframed wide container.
+    const picker = $<HTMLSelectElement>("fixture-picker");
+    const labelOpt = Array.from(picker.options).find((o) => o.value === name);
+    const label = labelOpt?.textContent?.trim() ?? name;
+    const sectionHeader = buildSectionHeader(label, conv);
+    root.appendChild(sectionHeader);
+
+    const slot = document.createElement("div");
+    slot.className = "fixture-section__chat";
+    root.appendChild(slot);
+    renderConversation(conv, slot);
+
+    const sub = sectionHeader.querySelector(".fixture-section__sub");
+    if (sub) sub.textContent = describeRenderedCounts(conv, slot);
+
+    const bubbles = slot.querySelectorAll(".row").length;
     const original = conv.messages.length;
     const expansionTag =
       bubbles > original ? ` (expanded from ${original})` : "";
