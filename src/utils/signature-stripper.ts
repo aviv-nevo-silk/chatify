@@ -35,8 +35,16 @@ const MOBILE_SIG = [
 ];
 
 const LONE_NAME = /^[A-Z][a-zA-Z'\-]+(\s+[A-Z][a-zA-Z'.\-]+){0,2}$/;
-const CONTACT_LINE =
-  /(\+?\d[\d\s\-().]{6,}\d)|(https?:\/\/)|([A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,})/;
+// Phone patterns require either a `+` country-code prefix OR a separator
+// (space/dash/paren) inside the digit run. This excludes false positives
+// like `/public/.../00072236/` (a path) and `Build #148462` (a ticket).
+const PHONE_INTL = /\+\d{1,4}[\s\-]?\d[\d\s\-().]{5,}\d/;
+const PHONE_SEP = /\d{1,4}[\s\-()]\d[\d\s\-().]{5,}\d/;
+const URL_RE = /https?:\/\//;
+const EMAIL_RE = /[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}/;
+const CONTACT_LINE_RE = new RegExp(
+  `(${PHONE_INTL.source})|(${PHONE_SEP.source})|(${URL_RE.source})|(${EMAIL_RE.source})`,
+);
 const TITLE_KEYWORDS =
   /\b(Manager|Director|Engineer|Lead|Architect|Sales|Marketing|Support|CEO|CTO|CFO|VP|HR|Specialist|Consultant|Officer|President|Founder|Designer|Developer|Analyst|Coordinator|Administrator|Technical|Executive|Senior|Principal|Staff|Associate|Head\s+of)\b/i;
 
@@ -98,11 +106,23 @@ function isSignatureBlock(el: Element): boolean {
   // Long blocks (e.g. body paragraphs) are never signatures.
   if (text.length > 240) return false;
 
+  // A wrapper element containing 3+ meaningful inner paragraphs is a body
+  // block, not a signature. Real signatures are small (one paragraph or a
+  // few short <br>-separated lines). This also catches the case where a
+  // body paragraph happens to mention a phone-like digit run (a path, a
+  // ticket number, a build #).
+  let innerMeaningful = 0;
+  for (const child of Array.from(el.querySelectorAll("p, div"))) {
+    const t = (child.textContent ?? "").trim();
+    if (t.length > 5) innerMeaningful++;
+    if (innerMeaningful >= 3) return false;
+  }
+
   const segments = splitByBr(el);
   if (segments.length === 0) return true;
 
   // Any line containing a contact (phone/URL/email) is a strong signature signal.
-  if (segments.some((s) => CONTACT_LINE.test(s))) return true;
+  if (segments.some((s) => CONTACT_LINE_RE.test(s))) return true;
 
   // Otherwise: every segment must be a salutation, mobile sig, lone name, or title line.
   return segments.every(isSignatureLine);
