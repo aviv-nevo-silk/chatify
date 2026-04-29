@@ -9,3 +9,11 @@ dist/
 tests/fixtures/*.json
 !tests/fixtures/*.sanitized.json
 !tests/fixtures/README.md
+
+# Vite outputs
+dist/
+.vite/
+
+# Editor
+.vscode/
+.idea/

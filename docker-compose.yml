@@ -1,0 +1,12 @@
+services:
+  chatify:
+    build: .
+    container_name: chatify-v1
+    ports:
+      - "3001:3000"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    restart: unless-stopped

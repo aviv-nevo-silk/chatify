@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatify · Dev</title>
+    <link rel="stylesheet" href="/src/styles/chat.css" />
+  </head>
+  <body class="dev-body">
+    <header class="dev-header">
+      <div class="dev-header__brand">Chatify · Dev</div>
+      <label class="dev-header__picker">
+        Fixture:
+        <select id="fixture-picker">
+          <option value="">— pick a fixture —</option>
+          <option value="gil-niv-mixed-hebrew">Gil Niv · mixed Hebrew (6 msgs)</option>
+          <option value="sentara-forward">Sentara forward (1 msg)</option>
+        </select>
+      </label>
+      <span id="dev-status" class="dev-header__status"></span>
+    </header>
+    <main id="chat-root" class="chat-root"></main>
+    <script type="module" src="/src/dev.ts"></script>
+  </body>
+</html>

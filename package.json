@@ -1,0 +1,21 @@
+{
+  "name": "chatify",
+  "version": "0.1.0",
+  "description": "Outlook add-in that re-renders email threads as a WhatsApp-style chat",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 3000",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview --host 0.0.0.0 --port 3000",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.3",
+    "vite": "^5.4.10",
+    "@types/dompurify": "^3.0.5"
+  },
+  "dependencies": {
+    "dompurify": "^3.2.0"
+  }
+}
