@@ -1,0 +1,65 @@
+{
+  "name": "synthetic-attachment-heavy",
+  "description": "Single message with a PDF attachment, an image attachment (pasted screenshot), and an inline image referenced via cid:. Tests file-card chip rendering, image-bubble rendering, and inline-image CID resolution. The PDF and screenshot attachments use 1x1 transparent PNG / minimal PDF base64 so the tests can verify data-url substitution without shipping real files.",
+  "captureSource": "Synthetic — no real PII. Safe to commit.",
+  "currentUser": { "name": "User Zero", "address": "user.zero@example.com" },
+  "conversationId": "synthetic-conv-att-001",
+  "messages": [
+    {
+      "id": "synthetic-msg-att-001",
+      "conversationId": "synthetic-conv-att-001",
+      "subject": "Q2 metrics review",
+      "sender": { "name": "Priya Khanna", "address": "priya.khanna@example.com" },
+      "toRecipients": [{ "name": "User Zero", "address": "user.zero@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-08T11:30:00.000Z",
+      "receivedDateTime": "2026-04-08T11:30:01.000Z",
+      "hasAttachments": true,
+      "body": {
+        "contentType": "html",
+        "content": "<p>Hi — attaching the Q2 review deck and the latency screenshot from yesterday's incident.</p><p>The chart inline below shows the signup funnel:</p><p><img src='cid:funnel-chart-001' alt='Signup funnel chart'/></p><p>Let me know if anything looks off before Friday.</p>"
+      },
+      "attachments": [
+        {
+          "id": "att-pdf-001",
+          "name": "Q2-metrics-review.pdf",
+          "contentType": "application/pdf",
+          "size": 1456789,
+          "isInline": false,
+          "contentBytes": "JVBERi0xLjQKJeLjz9MK"
+        },
+        {
+          "id": "att-img-001",
+          "name": "latency-incident-2026-04-07.png",
+          "contentType": "image/png",
+          "size": 248320,
+          "isInline": false,
+          "contentBytes": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII="
+        },
+        {
+          "id": "att-cid-001",
+          "name": "funnel-chart.png",
+          "contentType": "image/png",
+          "size": 18420,
+          "isInline": true,
+          "contentId": "funnel-chart-001",
+          "contentBytes": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkAAIAAAoAAv/lxKUAAAAASUVORK5CYII="
+        }
+      ]
+    }
+  ],
+  "expected": {
+    "systemEvents": [],
+    "rowCount": 1,
+    "rowsInOrder": [
+      { "senderName": "Priya Khanna", "isOut": false, "contains": "Q2 review deck" }
+    ],
+    "rtlRowCount": 0,
+    "fileCardCount": 1,
+    "fileCardNames": ["Q2-metrics-review.pdf"],
+    "imageBubbleCount": 1,
+    "imageBubbleNames": ["latency-incident-2026-04-07.png"],
+    "inlineImageCount": 1,
+    "inlineImageCidResolved": true
+  }
+}

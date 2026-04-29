@@ -9,6 +9,9 @@ dist/
 tests/fixtures/*.json
 !tests/fixtures/*.sanitized.json
 !tests/fixtures/README.md
+# Synthetic fixtures (no real PII) ARE committed
+!tests/fixtures/synthetic/
+!tests/fixtures/synthetic/*.json
 
 # Vite outputs
 dist/

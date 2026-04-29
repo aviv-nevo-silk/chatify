@@ -1,0 +1,107 @@
+{
+  "name": "synthetic-mixed-language",
+  "description": "Bilingual technical thread: Hebrew and English replies interleaved, with a @mention in one of the Hebrew bubbles. Tests per-bubble RTL detection (2 RTL out of 5), mention pill rendering, and 'current-user-on-the-right' (Dana = 2 messages on the right).",
+  "captureSource": "Synthetic — no real PII. Safe to commit.",
+  "currentUser": { "name": "Dana Cohen", "address": "dana.cohen@example.com" },
+  "conversationId": "synthetic-conv-rtl-001",
+  "messages": [
+    {
+      "id": "synthetic-msg-rtl-001",
+      "conversationId": "synthetic-conv-rtl-001",
+      "subject": "Build pipeline question",
+      "sender": { "name": "Yossi Bar", "address": "yossi.bar@example.com" },
+      "toRecipients": [{ "name": "Dana Cohen", "address": "dana.cohen@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-10T07:15:00.000Z",
+      "receivedDateTime": "2026-04-10T07:15:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p dir='rtl' lang='he'>היי דנה,</p><p dir='rtl' lang='he'>הבילד נכשל אתמול בלילה ואני לא בטוח למה. את יכולה להסתכל?</p>"
+      }
+    },
+    {
+      "id": "synthetic-msg-rtl-002",
+      "conversationId": "synthetic-conv-rtl-001",
+      "subject": "Re: Build pipeline question",
+      "sender": { "name": "Dana Cohen", "address": "dana.cohen@example.com" },
+      "toRecipients": [{ "name": "Yossi Bar", "address": "yossi.bar@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-10T08:02:00.000Z",
+      "receivedDateTime": "2026-04-10T08:02:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p>Looking now — looks like the cache step ran out of disk. I bumped the runner size; retrying.</p>"
+      }
+    },
+    {
+      "id": "synthetic-msg-rtl-003",
+      "conversationId": "synthetic-conv-rtl-001",
+      "subject": "Re: Build pipeline question",
+      "sender": { "name": "Yossi Bar", "address": "yossi.bar@example.com" },
+      "toRecipients": [{ "name": "Dana Cohen", "address": "dana.cohen@example.com" }],
+      "ccRecipients": [{ "name": "Lior Ben-Ami", "address": "lior.benami@example.com" }],
+      "sentDateTime": "2026-04-10T08:31:00.000Z",
+      "receivedDateTime": "2026-04-10T08:31:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p dir='rtl' lang='he'>תודה! מוסיף את <a class='mention' data-mention-email='lior.benami@example.com' href='mailto:lior.benami@example.com'>@Lior Ben-Ami</a> שלוקח את הפיצ'ר הזה לעבודה הבאה.</p>"
+      },
+      "mentions": [
+        { "id": 1, "mentioned": { "name": "Lior Ben-Ami", "address": "lior.benami@example.com" }, "createdBy": { "name": "Yossi Bar", "address": "yossi.bar@example.com" } }
+      ]
+    },
+    {
+      "id": "synthetic-msg-rtl-004",
+      "conversationId": "synthetic-conv-rtl-001",
+      "subject": "Re: Build pipeline question",
+      "sender": { "name": "Lior Ben-Ami", "address": "lior.benami@example.com" },
+      "toRecipients": [{ "name": "Yossi Bar", "address": "yossi.bar@example.com" }, { "name": "Dana Cohen", "address": "dana.cohen@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-10T09:14:00.000Z",
+      "receivedDateTime": "2026-04-10T09:14:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p>Got it. I'll take it from here — adding caching with size limits so this doesn't happen again.</p>"
+      }
+    },
+    {
+      "id": "synthetic-msg-rtl-005",
+      "conversationId": "synthetic-conv-rtl-001",
+      "subject": "Re: Build pipeline question",
+      "sender": { "name": "Dana Cohen", "address": "dana.cohen@example.com" },
+      "toRecipients": [{ "name": "Lior Ben-Ami", "address": "lior.benami@example.com" }, { "name": "Yossi Bar", "address": "yossi.bar@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-10T09:20:00.000Z",
+      "receivedDateTime": "2026-04-10T09:20:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p>Perfect, thanks Lior.</p>"
+      }
+    }
+  ],
+  "expected": {
+    "systemEvents": [],
+    "rowCount": 5,
+    "rowsInOrder": [
+      { "senderName": "Yossi Bar", "isOut": false, "isRtl": true, "contains": "הבילד נכשל" },
+      { "senderName": "Dana Cohen", "isOut": true, "isRtl": false, "contains": "out of disk" },
+      { "senderName": "Yossi Bar", "isOut": false, "isRtl": true, "contains": "תודה" },
+      { "senderName": "Lior Ben-Ami", "isOut": false, "isRtl": false, "contains": "caching with size limits" },
+      { "senderName": "Dana Cohen", "isOut": true, "isRtl": false, "contains": "Perfect" }
+    ],
+    "rtlRowCount": 2,
+    "outRowCount": 2,
+    "mentionPillCount": 1,
+    "mentionTargets": ["lior.benami@example.com"]
+  }
+}

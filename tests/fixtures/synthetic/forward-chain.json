@@ -1,0 +1,53 @@
+{
+  "name": "synthetic-forward-chain",
+  "description": "Fictional support thread forwarded into the user's inbox. Outermost sender (Robin) forwards a 4-deep chain. Tests forward parsing, signature stripping (Mona's contact block, 'Best,/Robin'), address consolidation (Sam appears twice — once with email, once name-only), and the system event ('Robin forwarded this thread to you').",
+  "captureSource": "Synthetic — no real PII. Safe to commit.",
+  "currentUser": { "name": "User Zero", "address": "user.zero@example.com" },
+  "conversationId": "synthetic-conv-fwd-001",
+  "messages": [
+    {
+      "id": "synthetic-msg-fwd-001",
+      "conversationId": "synthetic-conv-fwd-001",
+      "subject": "Fw: Login outage on widget-prod",
+      "sender": { "name": "Robin Lee", "address": "robin.lee@example.com" },
+      "toRecipients": [{ "name": "User Zero", "address": "user.zero@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-15T14:20:00.000Z",
+      "receivedDateTime": "2026-04-15T14:20:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p>FYI — looping you in. We need a fix by Friday.</p><p>Best,<br/>Robin</p><hr/><p><b>From:</b> Sam Patel &lt;sam.patel@example.com&gt;<br/><b>Sent:</b> Tuesday, April 14, 2026 5:42 PM<br/><b>To:</b> Robin Lee<br/><b>Subject:</b> Re: Login outage on widget-prod</p><p>Confirmed — engineering is on it. Mona has the trace.</p><hr/><p><b>From:</b> Mona Schwartz<br/><b>Sent:</b> Tuesday, April 14, 2026 4:18 PM<br/><b>To:</b> Sam Patel<br/><b>Subject:</b> Re: Login outage on widget-prod</p><p>I pulled the SAML logs. The IdP cert rotated overnight and our cached JWKS didn't refresh. Restarting the auth pods cleared it for now but we need a real fix.</p><p><b>Mona Schwartz</b><br/>Senior SRE, Platform<br/>Acme Widgets · mona.schwartz@example.com · +1 555 0144</p><hr/><p><b>From:</b> Sam Patel<br/><b>Sent:</b> Tuesday, April 14, 2026 3:55 PM<br/><b>To:</b> support@example.com<br/><b>Subject:</b> Login outage on widget-prod</p><p>Customers can't log into widget-prod since 14:30 UTC. ~40 tickets and rising. Anyone seeing this on the platform side?</p><p>Get Outlook for iOS</p>"
+      }
+    }
+  ],
+  "expected": {
+    "systemEvents": [
+      { "kind": "forwarded", "actorName": "Robin Lee" }
+    ],
+    "rowCount": 4,
+    "rowsInOrder": [
+      { "senderName": "Sam Patel", "isOut": false, "contains": "Customers can't log into widget-prod" },
+      { "senderName": "Mona Schwartz", "isOut": false, "contains": "SAML logs" },
+      { "senderName": "Sam Patel", "isOut": false, "contains": "Confirmed" },
+      { "senderName": "Robin Lee", "isOut": false, "contains": "looping you in" }
+    ],
+    "stripped": [
+      "+1 555 0144",
+      "Senior SRE",
+      "Get Outlook for iOS"
+    ],
+    "preserved": [
+      "looping you in",
+      "Confirmed",
+      "SAML logs",
+      "IdP cert rotated"
+    ],
+    "addressConsolidation": {
+      "Sam Patel": "sam.patel@example.com"
+    },
+    "rtlRowCount": 0,
+    "dayDividers": ["Tuesday", "Wednesday"]
+  }
+}
