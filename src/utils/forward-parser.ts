@@ -21,8 +21,13 @@ import type { EmailAddress, Message } from "../types.js";
 // The boundary BEFORE such a header may be `<hr/>` (most common) OR a styled
 // `<div style="border:none;border-top:solid #E1E1E1 1.0pt;...">` block, OR
 // nothing at all. Splitting on the header itself handles all three cases.
+// `(?!\/)` excludes closing tags (`</p>`, `</div>`); we only want the
+// opening-tag chain leading INTO `<b>From:</b>`. Without this, the regex
+// could match starting at an EARLIER element (e.g. an empty `<p></p>`)
+// and treat `</p>` as part of the chain — making segment boundaries land
+// at the wrong place.
 const HEADER_BOUNDARY_RE =
-  /<(?:p|div)\b[^>]*>(?:\s*<[^>]+>)*\s*<b>\s*From:\s*<\/b>/gi;
+  /<(?:p|div)\b[^>]*>(?:\s*<(?!\/)[^>]+>)*\s*<b>\s*From:\s*<\/b>/gi;
 const FROM_RE = /<b>\s*From:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SENT_RE = /<b>\s*Sent:\s*<\/b>\s*([\s\S]+?)\s*<br/i;
 const SUBJECT_RE = /<b>\s*Subject:\s*<\/b>\s*([\s\S]+?)(?:\s*<br|\s*<\/p>)/i;
@@ -130,19 +135,33 @@ function parseForwardedSegment(
   parent: Message,
   index: number,
 ): Message | null {
-  const fromMatch = segment.match(FROM_RE);
-  const sentMatch = segment.match(SENT_RE);
+  // Parse the segment as a DOM tree so we can find the header element
+  // properly and extract the body without leaving orphan close tags.
+  // String-slicing on raw HTML loses or breaks the chunks where forwarded
+  // headers are wrapped in nested <div>s (Outlook does this for the deepest
+  // nesting levels and for "border-top:solid" styled separators).
+  const doc = new DOMParser().parseFromString(
+    `<div id="chatify-seg">${segment}</div>`,
+    "text/html",
+  );
+  const root = doc.getElementById("chatify-seg");
+  if (!root) return null;
+
+  const headerEl = findHeaderElement(root);
+  if (!headerEl) return null;
+
+  const headerHtml = headerEl.innerHTML;
+  const fromMatch = headerHtml.match(FROM_RE);
+  const sentMatch = headerHtml.match(SENT_RE);
   if (!fromMatch || !sentMatch) return null;
 
   const sentDateTime = parseEmailDate(sentMatch[1] ?? "");
   if (!sentDateTime) return null;
 
-  const subjectMatch = segment.match(SUBJECT_RE);
+  const subjectMatch = headerHtml.match(SUBJECT_RE);
   const sender = parseEmailAddress(fromMatch[1] ?? "");
 
-  // Body = everything after the closing </p> of the header paragraph.
-  const headerEnd = segment.indexOf("</p>");
-  const bodyHtml = headerEnd >= 0 ? segment.slice(headerEnd + 4).trim() : "";
+  const bodyHtml = extractContentAfter(headerEl, root);
 
   return {
     id: `${parent.id}#virt-${index}`,
@@ -158,6 +177,53 @@ function parseForwardedSegment(
     hasAttachments: false,
     body: { contentType: "html", content: bodyHtml },
   };
+}
+
+/**
+ * Find the smallest <p>/<div> element under `root` that contains both
+ * `<b>From:</b>` and `<b>Sent:</b>`. That's the header paragraph itself
+ * (not a wrapper div around it).
+ */
+function findHeaderElement(root: HTMLElement): HTMLElement | null {
+  const candidates = root.querySelectorAll("p, div");
+  let result: HTMLElement | null = null;
+  for (const el of Array.from(candidates)) {
+    const html = el.innerHTML;
+    if (!FROM_RE.test(html)) continue;
+    if (!SENT_RE.test(html)) continue;
+    // Smallest = the deepest element that still satisfies the test.
+    if (!result || result.contains(el)) {
+      result = el as HTMLElement;
+    }
+  }
+  return result;
+}
+
+/**
+ * Return the HTML of everything that appears AFTER `headerEl` in document
+ * order, up to the root. This is the content that belongs to the forwarded
+ * message (its body, attachments markup, etc.), excluding the header.
+ *
+ * Walks: headerEl's nextSiblings, then up to each ancestor and collects
+ * THEIR nextSiblings, until reaching root.
+ */
+function extractContentAfter(headerEl: Element, root: Element): string {
+  const parts: string[] = [];
+  collectFollowingSiblings(headerEl, parts);
+  let parent = headerEl.parentElement;
+  while (parent && parent !== root) {
+    collectFollowingSiblings(parent, parts);
+    parent = parent.parentElement;
+  }
+  return parts.join("");
+}
+
+function collectFollowingSiblings(node: Element, parts: string[]): void {
+  let sib: Element | null = node.nextElementSibling;
+  while (sib) {
+    parts.push(sib.outerHTML);
+    sib = sib.nextElementSibling;
+  }
 }
 
 function parseEmailAddress(text: string): EmailAddress {
