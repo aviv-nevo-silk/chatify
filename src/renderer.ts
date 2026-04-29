@@ -30,6 +30,7 @@ import { senderColor } from "./utils/color.js";
 import { bubbleDir } from "./utils/rtl.js";
 import { sanitizeBodyHtml } from "./utils/sanitize.js";
 import { decorateMentions } from "./utils/mentions.js";
+import { stripSignature } from "./utils/signature-stripper.js";
 import {
   categorizeAttachment,
   attachmentIcon,
@@ -156,7 +157,11 @@ function buildContent(message: Message, senderHex: string): HTMLElement {
   const content = document.createElement("div");
   content.className = "bubble__content";
 
-  const cleaned = sanitizeBodyHtml(message.body.content);
+  // Strip trailing signatures and closings BEFORE sanitization so DOMPurify
+  // sees the trimmed body. Sanitizer guards untrusted HTML; signature stripper
+  // is just noise reduction.
+  const stripped = stripSignature(message.body.content);
+  const cleaned = sanitizeBodyHtml(stripped);
   const decorated = decorateMentions(cleaned, senderHex);
   // `decorated` came out of DOMPurify and our DOMParser round-trip — safe.
   content.innerHTML = decorated;

@@ -415,14 +415,31 @@ body {
   border-bottom-color: rgba(184, 237, 255, 0.4);
 }
 
+/* Blockquotes inside a bubble are quoted snippets within the message —
+ * NOT a separate reply. Keep the styling restrained so it reads as a side
+ * quote, not as its own bubble. */
 .bubble__content blockquote {
-  margin: 6px 0;
-  padding: 8px 12px;
-  border-inline-start: 3px solid var(--accent);
-  background: rgba(255, 255, 255, 0.04);
+  position: relative;
+  margin: 6px 0 6px 4px;
+  padding: 2px 0 2px 14px;
+  border-inline-start: 2px solid
+    color-mix(in srgb, var(--text-secondary) 45%, transparent);
+  background: transparent;
   color: var(--text-secondary);
-  border-radius: 0 6px 6px 0;
-  font-style: italic;
+  font-style: normal;
+  font-size: 13.5px;
+  border-radius: 0;
+}
+
+.bubble__content blockquote::before {
+  content: "“";
+  position: absolute;
+  left: 0;
+  top: -4px;
+  font-size: 18px;
+  color: color-mix(in srgb, var(--text-secondary) 60%, transparent);
+  font-family: Georgia, serif;
+  line-height: 1;
 }
 
 .bubble__content code,

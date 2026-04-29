@@ -54,12 +54,32 @@ export function expandForwardedChain(message: Message): Message[] {
 
   if (expanded.length === 0) return [message];
 
+  // Consolidate addresses: when the same person appears in multiple segments
+  // with both a real and a synthesized (name-only) address, prefer the real
+  // one everywhere so they get one consistent sender color.
+  consolidateAddresses(expanded);
+
   expanded.sort(
     (a, b) =>
       new Date(a.sentDateTime).getTime() - new Date(b.sentDateTime).getTime(),
   );
 
   return expanded;
+}
+
+function consolidateAddresses(messages: Message[]): void {
+  const nameToReal = new Map<string, string>();
+  for (const m of messages) {
+    if (!m.sender.address.endsWith("@unknown.local")) {
+      nameToReal.set(m.sender.name.toLowerCase(), m.sender.address);
+    }
+  }
+  for (const m of messages) {
+    if (m.sender.address.endsWith("@unknown.local")) {
+      const real = nameToReal.get(m.sender.name.toLowerCase());
+      if (real) m.sender = { ...m.sender, address: real };
+    }
+  }
 }
 
 function parseForwardedSegment(
