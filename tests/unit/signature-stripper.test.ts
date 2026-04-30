@@ -88,6 +88,31 @@ describe("stripSignature", () => {
     expect(out).toMatch(/Aviv/);
   });
 
+  it("walks past trailing social-media icon <img> tags to strip the signature", () => {
+    // Real Outlook signatures often end with LinkedIn / Twitter / etc icons
+    // as <img> tags. Without IMG in the walk-back set, the stripper used to
+    // hit those and stop before reaching the actual signature text above.
+    const html =
+      "<p>Thanks for joining the session. Here is the recorded session.</p>" +
+      "<img alt='signature_4182891203' src='cid:abc'/>" +
+      "<div>Jameel Shorosh</div>" +
+      "<div>Software Architect</div>" +
+      "<div>Mobile: +972 523-977-094</div>" +
+      "<div>Email: <a href='mailto:jameel.shorosh@silk.us'>jameel.shorosh@silk.us</a></div>" +
+      "<div><a href='https://www.silk.us'>www.silk.us</a></div>" +
+      "<img alt='A white letter in a blue circle Description automatically generated' src='cid:linkedin'/>" +
+      "<img alt='A white bird in a circle Description automatically generated' src='cid:twitter'/>" +
+      "<img alt='A white letter f in a blue circle Description automatically generated' src='cid:fb'/>";
+    const out = stripSignature(html);
+    expect(out).toMatch(/Thanks for joining the session/);
+    expect(out).not.toMatch(/Jameel Shorosh/);
+    expect(out).not.toMatch(/Software Architect/);
+    expect(out).not.toMatch(/\+972 523-977-094/);
+    expect(out).not.toMatch(/jameel\.shorosh@silk\.us/);
+    expect(out).not.toMatch(/signature_4182891203/);
+    expect(out).not.toMatch(/Description automatically generated/);
+  });
+
   it("strips Microsoft Teams meeting boilerplate appended to a body", () => {
     const html =
       "<p>Hey,</p>" +
