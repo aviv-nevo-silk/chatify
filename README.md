@@ -4,6 +4,10 @@ An Outlook add-in that re-renders an email thread as a WhatsApp-style group chat
 
 > Reading a 17-message forwarded thread is painful. Reading the same conversation as a chat is not. That's the entire pitch.
 
+![Chatify demo](docs/demo.gif)
+
+▶ [Narrated walkthrough (webm, 28s)](docs/demo-narrated.webm)
+
 ## Live URLs
 
 | What | Where |
