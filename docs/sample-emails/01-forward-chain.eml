@@ -1,0 +1,33 @@
+From: "Robin Lee" <robin.lee@example.com>
+To: "Aviv (you)" <avivnevo10@outlook.com>
+Subject: Fw: Login outage on widget-prod
+Date: Wed, 15 Apr 2026 14:20:00 +0000
+Message-ID: <chatify-sample-fwd-001@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body>
+<p>FYI &mdash; looping you in. We need a fix by Friday.</p>
+<p>Best,<br/>Robin</p>
+<hr/>
+<p><b>From:</b> Sam Patel &lt;sam.patel@example.com&gt;<br/>
+<b>Sent:</b> Tuesday, April 14, 2026 5:42 PM<br/>
+<b>To:</b> Robin Lee<br/>
+<b>Subject:</b> Re: Login outage on widget-prod</p>
+<p>Confirmed &mdash; engineering is on it. Mona has the trace.</p>
+<hr/>
+<p><b>From:</b> Mona Schwartz<br/>
+<b>Sent:</b> Tuesday, April 14, 2026 4:18 PM<br/>
+<b>To:</b> Sam Patel<br/>
+<b>Subject:</b> Re: Login outage on widget-prod</p>
+<p>I pulled the SAML logs. The IdP cert rotated overnight and our cached JWKS didn't refresh. Restarting the auth pods cleared it for now but we need a real fix.</p>
+<p><b>Mona Schwartz</b><br/>Senior SRE, Platform<br/>Acme Widgets &middot; mona.schwartz@example.com &middot; +1 555 0144</p>
+<hr/>
+<p><b>From:</b> Sam Patel<br/>
+<b>Sent:</b> Tuesday, April 14, 2026 3:55 PM<br/>
+<b>To:</b> support@example.com<br/>
+<b>Subject:</b> Login outage on widget-prod</p>
+<p>Customers can't log into widget-prod since 14:30 UTC. ~40 tickets and rising. Anyone seeing this on the platform side?</p>
+<p>Get Outlook for iOS</p>
+</body></html>

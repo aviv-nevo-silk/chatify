@@ -1,0 +1,25 @@
+From: "Yossi Bar" <yossi.bar@example.com>
+To: "Aviv (you)" <avivnevo10@outlook.com>
+Subject: Re: Build pipeline question
+Date: Fri, 10 Apr 2026 09:31:00 +0000
+Message-ID: <chatify-sample-rtl-001@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body>
+<p dir="rtl" lang="he">תודה דנה! מוסיף את ליאור שלוקח את הפיצ'ר הזה לעבודה הבאה.</p>
+<hr/>
+<p><b>From:</b> Dana Cohen &lt;dana.cohen@example.com&gt;<br/>
+<b>Sent:</b> Friday, April 10, 2026 11:02 AM<br/>
+<b>To:</b> Yossi Bar<br/>
+<b>Subject:</b> Re: Build pipeline question</p>
+<p>Looking now &mdash; looks like the cache step ran out of disk. I bumped the runner size; retrying. Will report back in 10 minutes.</p>
+<hr/>
+<p><b>From:</b> Yossi Bar &lt;yossi.bar@example.com&gt;<br/>
+<b>Sent:</b> Friday, April 10, 2026 10:15 AM<br/>
+<b>To:</b> Dana Cohen<br/>
+<b>Subject:</b> Build pipeline question</p>
+<p dir="rtl" lang="he">היי דנה,</p>
+<p dir="rtl" lang="he">הבילד נכשל אתמול בלילה ואני לא בטוח למה. את יכולה להסתכל?</p>
+</body></html>

@@ -1,0 +1,31 @@
+From: "Alex Rivera" <alex.rivera@example.com>
+To: "Aviv (you)" <avivnevo10@outlook.com>
+Subject: Re: Q3 roadmap draft
+Date: Wed, 22 Apr 2026 17:45:00 +0000
+Message-ID: <chatify-sample-reply-001@example.com>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+<html><body>
+<p>Sounds good &mdash; let's go with that. I'll set up the kickoff for Monday.</p>
+<p>Best,<br/>Alex</p>
+<hr/>
+<p><b>From:</b> Jordan Kim &lt;jordan.kim@example.com&gt;<br/>
+<b>Sent:</b> Wednesday, April 22, 2026 11:30 AM<br/>
+<b>To:</b> Alex Rivera<br/>
+<b>Subject:</b> Re: Q3 roadmap draft</p>
+<p>I added two more items to the roadmap &mdash; auth refresh and the metrics dashboard. Take a look when you can.</p>
+<hr/>
+<p><b>From:</b> Alex Rivera<br/>
+<b>Sent:</b> Wednesday, April 22, 2026 9:15 AM<br/>
+<b>To:</b> Jordan Kim<br/>
+<b>Subject:</b> Re: Q3 roadmap draft</p>
+<p>Looks great. Two questions: should the auth refresh land before or after the dashboards, and is the SRE team aware of the timeline?</p>
+<hr/>
+<p><b>From:</b> Jordan Kim<br/>
+<b>Sent:</b> Tuesday, April 21, 2026 4:50 PM<br/>
+<b>To:</b> Alex Rivera<br/>
+<b>Subject:</b> Q3 roadmap draft</p>
+<p>Here's the first cut at the Q3 roadmap. Let me know what you think &mdash; happy to revise.</p>
+</body></html>
