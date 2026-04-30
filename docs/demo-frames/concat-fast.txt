@@ -1,0 +1,15 @@
+file '01-landing.png'
+duration 2.0
+file '02-dev-empty.png'
+duration 1.4
+file '03-forward-chain-top.png'
+duration 4.8
+file '04-forward-chain-bottom.png'
+duration 4.5
+file '05-mixed-language.png'
+duration 6.0
+file '06-attachment-heavy.png'
+duration 3.4
+file '07-viewer.png'
+duration 5.8
+file '07-viewer.png'
