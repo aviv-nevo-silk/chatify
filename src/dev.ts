@@ -103,11 +103,21 @@ async function loadFixture(name: string): Promise<void> {
     root.appendChild(sectionHeader);
 
     // Mirror this fixture as the "live" conversation so the viewer.html tab
-    // can render it. Same key the live taskpane.ts writes to.
+    // can render it. Same key the live taskpane.ts writes to. Plus
+    // BroadcastChannel ping for any open viewer tab.
     try {
       localStorage.setItem(LIVE_KEY, JSON.stringify(conv));
     } catch {
       // localStorage may be disabled; the in-page render still works.
+    }
+    if (typeof BroadcastChannel !== "undefined") {
+      try {
+        const ch = new BroadcastChannel("chatify-live");
+        ch.postMessage({ type: "live-update" });
+        ch.close();
+      } catch {
+        // ignore
+      }
     }
 
     const slot = document.createElement("div");

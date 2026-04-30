@@ -7,6 +7,7 @@ import type { Conversation } from "./types.js";
 import { renderConversation } from "./renderer.js";
 
 const LIVE_KEY = "chatify.liveConversation";
+const CHANNEL_NAME = "chatify-live";
 
 function $<T extends HTMLElement>(id: string): T {
   const el = document.getElementById(id);
@@ -69,32 +70,52 @@ function buildEmptyState(): HTMLElement {
 
 function init(): void {
   render();
+  installRefreshButton();
 
-  // 1. Cross-tab storage events — fires when the task pane (or dev page)
-  //    in another tab writes a new conversation.
   let lastSerialized = localStorage.getItem(LIVE_KEY);
-  window.addEventListener("storage", (e) => {
-    if (e.key !== LIVE_KEY) return;
-    lastSerialized = e.newValue;
-    render();
-  });
-
-  // 2. Polling fallback for ~10s after load. Storage events from Outlook's
-  //    sandboxed iframe don't always reach a separate browser tab; poll
-  //    catches the common case where the task pane writes localStorage
-  //    shortly after this tab opens.
-  let polls = 0;
-  const interval = window.setInterval(() => {
+  const refresh = (): void => {
     const current = localStorage.getItem(LIVE_KEY);
     if (current !== lastSerialized) {
       lastSerialized = current;
       render();
     }
-    if (++polls >= 20) window.clearInterval(interval);
-  }, 500);
+  };
 
-  // 3. Re-render on tab focus, in case all of the above missed.
-  window.addEventListener("focus", () => render());
+  // 1. BroadcastChannel — designed for same-origin cross-tab/iframe messages.
+  //    More reliable than `storage` events when the writer is inside a
+  //    sandboxed iframe (like Outlook's task pane).
+  if (typeof BroadcastChannel !== "undefined") {
+    const channel = new BroadcastChannel(CHANNEL_NAME);
+    channel.addEventListener("message", (e: MessageEvent) => {
+      if ((e.data as { type?: string } | null)?.type === "live-update") {
+        refresh();
+      }
+    });
+  }
+
+  // 2. Standard `storage` event (cross-tab, same origin).
+  window.addEventListener("storage", (e) => {
+    if (e.key === LIVE_KEY) refresh();
+  });
+
+  // 3. Permanent low-frequency poll. Belt-and-suspenders for the case where
+  //    neither BroadcastChannel nor storage events fire from the iframe.
+  //    1s × cheap getItem = negligible CPU.
+  window.setInterval(refresh, 1000);
+
+  // 4. Re-render whenever the user focuses this tab.
+  window.addEventListener("focus", refresh);
+}
+
+function installRefreshButton(): void {
+  const status = $("dev-status");
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.textContent = "↻ Refresh";
+  btn.style.cssText =
+    "background:transparent;border:1px solid rgba(37,211,102,0.4);color:#25d366;padding:4px 10px;border-radius:999px;cursor:pointer;font-size:11.5px;margin-left:10px;";
+  btn.addEventListener("click", () => render());
+  status.parentElement?.appendChild(btn);
 }
 
 if (document.readyState === "loading") {

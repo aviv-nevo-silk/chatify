@@ -19,7 +19,25 @@ import { renderConversation } from "./renderer.js";
 // @types/office-js (global namespace via the triple-slash directive above).
 
 const LIVE_KEY = "chatify.liveConversation";
+const CHANNEL_NAME = "chatify-live";
 const VIEWER_URL = "/viewer.html";
+
+// Broadcast updates to any open viewer tabs the moment localStorage changes.
+// More reliable than the `storage` event when the writer is inside a
+// sandboxed iframe (Outlook's task pane).
+const broadcastChannel =
+  typeof BroadcastChannel !== "undefined"
+    ? new BroadcastChannel(CHANNEL_NAME)
+    : null;
+
+function writeLiveConversation(conversation: Conversation): void {
+  try {
+    localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
+  } catch {
+    // localStorage may be disabled.
+  }
+  broadcastChannel?.postMessage({ type: "live-update" });
+}
 
 const root = () => document.getElementById("chat-root")!;
 
@@ -98,12 +116,8 @@ function syncLiveConversationToStorage(
         item as Office.MessageRead,
         result.value,
       );
-      try {
-        localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
-        onComplete?.(true);
-      } catch {
-        onComplete?.(false);
-      }
+      writeLiveConversation(conversation);
+      onComplete?.(true);
     },
   );
 }
@@ -134,13 +148,10 @@ function chatifyCurrent(): void {
     // mirrors WhatsApp's "in-conversation actions" pattern.
     insertViewerLinkAfterHeader(r);
 
-    // Mirror to localStorage so the full-screen viewer (a separate browser
-    // tab on the same origin) can render the same chat at full width.
-    try {
-      localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
-    } catch {
-      // localStorage may be disabled; the in-pane render still works.
-    }
+    // Mirror to localStorage + BroadcastChannel so the full-screen viewer
+    // (a separate browser tab on the same origin) can render the same
+    // chat at full width.
+    writeLiveConversation(conversation);
   });
 }
 
