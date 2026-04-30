@@ -1,0 +1,44 @@
+{
+  "name": "synthetic-reply-chain",
+  "description": "Outlook 4-message reply thread (back-and-forth between Jordan and Alex). The latest reply embeds the entire chain as quoted <b>From:</b> blocks — Outlook quotes replies in the same format it uses for forwards. Tests that the existing forward-parser handles reply chains identically (no Graph SSO needed when reading the latest message in an Outlook-formatted thread).",
+  "captureSource": "Synthetic — no real PII. Safe to commit.",
+  "currentUser": { "name": "Jordan Kim", "address": "jordan.kim@example.com" },
+  "conversationId": "synthetic-conv-reply-001",
+  "messages": [
+    {
+      "id": "synthetic-msg-reply-001",
+      "conversationId": "synthetic-conv-reply-001",
+      "subject": "Re: Q3 roadmap draft",
+      "sender": { "name": "Alex Rivera", "address": "alex.rivera@example.com" },
+      "toRecipients": [{ "name": "Jordan Kim", "address": "jordan.kim@example.com" }],
+      "ccRecipients": [],
+      "sentDateTime": "2026-04-22T17:45:00.000Z",
+      "receivedDateTime": "2026-04-22T17:45:01.000Z",
+      "hasAttachments": false,
+      "attachments": [],
+      "body": {
+        "contentType": "html",
+        "content": "<p>Sounds good — let's go with that. I'll set up the kickoff for Monday.</p><p>Best,<br/>Alex</p><hr/><p><b>From:</b> Jordan Kim &lt;jordan.kim@example.com&gt;<br/><b>Sent:</b> Wednesday, April 22, 2026 11:30 AM<br/><b>To:</b> Alex Rivera<br/><b>Subject:</b> Re: Q3 roadmap draft</p><p>I added two more items to the roadmap — auth refresh and the metrics dashboard. Take a look when you can.</p><hr/><p><b>From:</b> Alex Rivera<br/><b>Sent:</b> Wednesday, April 22, 2026 9:15 AM<br/><b>To:</b> Jordan Kim<br/><b>Subject:</b> Re: Q3 roadmap draft</p><p>Looks great. Two questions: should the auth refresh land before or after the dashboards, and is the SRE team aware of the timeline?</p><hr/><p><b>From:</b> Jordan Kim<br/><b>Sent:</b> Tuesday, April 21, 2026 4:50 PM<br/><b>To:</b> Alex Rivera<br/><b>Subject:</b> Q3 roadmap draft</p><p>Here's the first cut at the Q3 roadmap. Let me know what you think — happy to revise.</p>"
+      }
+    }
+  ],
+  "expected": {
+    "systemEvents": [],
+    "rowCount": 4,
+    "rowsInOrder": [
+      { "senderName": "Jordan Kim", "isOut": true,  "contains": "first cut at the Q3 roadmap" },
+      { "senderName": "Alex Rivera", "isOut": false, "contains": "Two questions" },
+      { "senderName": "Jordan Kim", "isOut": true,  "contains": "auth refresh and the metrics dashboard" },
+      { "senderName": "Alex Rivera", "isOut": false, "contains": "Sounds good" }
+    ],
+    "preserved": [
+      "first cut at the Q3 roadmap",
+      "Two questions",
+      "auth refresh and the metrics dashboard",
+      "Sounds good"
+    ],
+    "rtlRowCount": 0,
+    "outRowCount": 2,
+    "dayDividers": ["Tuesday", "Wednesday"]
+  }
+}

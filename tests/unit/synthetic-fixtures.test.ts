@@ -3,6 +3,7 @@ import { renderConversation } from "../../src/renderer";
 import type { Conversation } from "../../src/types";
 
 import forwardChain from "../fixtures/synthetic/forward-chain.json" with { type: "json" };
+import replyChain from "../fixtures/synthetic/reply-chain.json" with { type: "json" };
 import mixedLanguage from "../fixtures/synthetic/mixed-language.json" with { type: "json" };
 import attachmentHeavy from "../fixtures/synthetic/attachment-heavy.json" with { type: "json" };
 
@@ -45,6 +46,7 @@ interface FixtureWithExpected extends Conversation {
 
 const FIXTURES: Array<[string, FixtureWithExpected]> = [
   ["forward-chain", forwardChain as unknown as FixtureWithExpected],
+  ["reply-chain", replyChain as unknown as FixtureWithExpected],
   ["mixed-language", mixedLanguage as unknown as FixtureWithExpected],
   ["attachment-heavy", attachmentHeavy as unknown as FixtureWithExpected],
 ];
