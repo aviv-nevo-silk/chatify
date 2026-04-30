@@ -22,6 +22,21 @@ function setStatus(text: string, isError = false): void {
   else delete status.dataset.state;
 }
 
+function loadFromUrlHash(): Conversation | null {
+  // The taskpane.ts click handler embeds the conversation in the URL hash
+  // (#data=<encoded json>) so we can bypass Chrome's Storage Partitioning,
+  // which makes localStorage between the Outlook iframe and this tab live
+  // in separate partitions.
+  const hash = window.location.hash;
+  if (!hash.startsWith("#data=")) return null;
+  try {
+    const json = decodeURIComponent(hash.slice("#data=".length));
+    return JSON.parse(json) as Conversation;
+  } catch {
+    return null;
+  }
+}
+
 function loadFromStorage(): Conversation | null {
   const raw = localStorage.getItem(LIVE_KEY);
   if (!raw) return null;
@@ -32,9 +47,16 @@ function loadFromStorage(): Conversation | null {
   }
 }
 
+function loadConversation(): Conversation | null {
+  // URL hash takes priority — it's the authoritative source from the
+  // taskpane that just opened this tab. localStorage is fallback for
+  // legacy clients or same-partition scenarios.
+  return loadFromUrlHash() ?? loadFromStorage();
+}
+
 function render(): void {
   const root = $<HTMLElement>("chat-root");
-  const conv = loadFromStorage();
+  const conv = loadConversation();
   root.replaceChildren();
 
   if (!conv) {

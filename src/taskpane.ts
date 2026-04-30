@@ -30,7 +30,12 @@ const broadcastChannel =
     ? new BroadcastChannel(CHANNEL_NAME)
     : null;
 
+// Cache the most recently rendered conversation so the click handler can
+// embed it in the viewer URL hash synchronously (popup-blocker-safe).
+let lastConversation: Conversation | null = null;
+
 function writeLiveConversation(conversation: Conversation): void {
+  lastConversation = conversation;
   try {
     localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
   } catch {
@@ -175,17 +180,24 @@ function buildViewerLink(): HTMLElement {
   link.rel = "noopener noreferrer";
   link.textContent = "↗ Open full screen";
 
-  // On click: open the viewer tab synchronously to preserve the user's
-  // click gesture (avoids popup-blocker), then re-fetch the current
-  // message body and overwrite the live-conversation localStorage entry.
-  // The viewer's storage-event listener picks up the new content and
-  // re-renders. This guarantees the viewer reflects the email currently
-  // open in Outlook even if the task pane was closed when the user
-  // navigated to that email (so chatifyCurrent didn't fire to refresh).
+  // On click: encode the most recently rendered conversation directly into
+  // the viewer URL hash and open. This bypasses Chrome's Storage
+  // Partitioning, which separates the Outlook iframe's localStorage
+  // (under outlook.live.com) from the viewer tab's localStorage (under
+  // localhost:3001 as top). All storage-based sync (localStorage,
+  // BroadcastChannel, storage events) is partitioned the same way and
+  // unreliable across the iframe→tab boundary; URL data is not.
   link.addEventListener("click", (e) => {
     e.preventDefault();
-    const newWin = window.open(link.href, "_blank", "noopener,noreferrer");
-    if (!newWin) return; // popup blocked
+    let url = link.href;
+    if (lastConversation) {
+      const encoded = encodeURIComponent(JSON.stringify(lastConversation));
+      url = `${link.href}#data=${encoded}`;
+    }
+    const newWin = window.open(url, "_blank", "noopener,noreferrer");
+    if (!newWin) return;
+    // Also refresh localStorage in the (rare) same-partition case, so a
+    // viewer tab kept open from a previous click can pick up the update.
     syncLiveConversationToStorage();
   });
 
