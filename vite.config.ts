@@ -9,7 +9,12 @@ const httpsConfig =
     ? { cert: readFileSync(certPath), key: readFileSync(keyPath) }
     : undefined;
 
+// For GitHub Pages: site lives at https://<user>.github.io/<repo>/
+// Set CHATIFY_BASE=/chatify/ at build time to prefix all asset URLs.
+const base = process.env.CHATIFY_BASE ?? "/";
+
 export default defineConfig({
+  base,
   server: {
     https: httpsConfig,
     host: true,

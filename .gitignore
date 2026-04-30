@@ -13,7 +13,7 @@ tests/fixtures/*.json
 !tests/fixtures/synthetic/
 !tests/fixtures/synthetic/*.json
 
-# Vite outputs
+# Vite outputs (built by CI on every push, not tracked)
 dist/
 .vite/
 

@@ -91,8 +91,12 @@ function chatifyCurrent(): void {
 
     const r = root();
     r.replaceChildren();
-    r.appendChild(buildViewerLink());
     renderConversation(conversation, r);
+
+    // Place the "Open full screen" link directly UNDER the thread header
+    // (avatar + subject + participants) and ABOVE the day-divider/bubbles —
+    // mirrors WhatsApp's "in-conversation actions" pattern.
+    insertViewerLinkAfterHeader(r);
 
     // Mirror to localStorage so the full-screen viewer (a separate browser
     // tab on the same origin) can render the same chat at full width.
@@ -102,6 +106,16 @@ function chatifyCurrent(): void {
       // localStorage may be disabled; the in-pane render still works.
     }
   });
+}
+
+function insertViewerLinkAfterHeader(container: HTMLElement): void {
+  const link = buildViewerLink();
+  const header = container.querySelector(".chat-thread-header");
+  if (header && header.parentElement) {
+    header.parentElement.insertBefore(link, header.nextSibling);
+  } else {
+    container.insertBefore(link, container.firstChild);
+  }
 }
 
 function buildViewerLink(): HTMLElement {

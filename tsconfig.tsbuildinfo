@@ -1,0 +1,1 @@
+{"root":["./src/dev.ts","./src/renderer.ts","./src/taskpane.ts","./src/types.ts","./src/viewer.ts","./src/utils/attachments.ts","./src/utils/color.ts","./src/utils/dates.ts","./src/utils/forward-parser.ts","./src/utils/mentions.ts","./src/utils/rtl.ts","./src/utils/sanitize.ts","./src/utils/signature-stripper.ts","./vite.config.ts"],"version":"5.9.3"}

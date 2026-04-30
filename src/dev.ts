@@ -9,6 +9,7 @@ import type { Conversation } from "./types.js";
 import { renderConversation } from "./renderer.js";
 
 const STORAGE_KEY = "chatify.lastFixture";
+const LIVE_KEY = "chatify.liveConversation";
 const ALL_VALUE = "__all__";
 
 function $<T extends HTMLElement>(id: string): T {
@@ -57,6 +58,19 @@ function buildSectionHeader(label: string, conv: Conversation): HTMLElement {
   return header;
 }
 
+function buildViewerLink(): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "taskpane-actions";
+  const link = document.createElement("a");
+  link.className = "taskpane-actions__viewer";
+  link.href = "/viewer.html";
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "↗ Open full screen";
+  wrap.appendChild(link);
+  return wrap;
+}
+
 function describeRenderedCounts(conv: Conversation, slot: HTMLElement): string {
   const bubbles = slot.querySelectorAll(".row").length;
   const original = conv.messages.length;
@@ -88,10 +102,28 @@ async function loadFixture(name: string): Promise<void> {
     const sectionHeader = buildSectionHeader(label, conv);
     root.appendChild(sectionHeader);
 
+    // Mirror this fixture as the "live" conversation so the viewer.html tab
+    // can render it. Same key the live taskpane.ts writes to.
+    try {
+      localStorage.setItem(LIVE_KEY, JSON.stringify(conv));
+    } catch {
+      // localStorage may be disabled; the in-page render still works.
+    }
+
     const slot = document.createElement("div");
     slot.className = "fixture-section__chat";
     root.appendChild(slot);
     renderConversation(conv, slot);
+
+    // Place the "Open full screen" link directly under the thread header,
+    // before the bubbles — same pattern as the live task pane.
+    const header = slot.querySelector(".chat-thread-header");
+    const link = buildViewerLink();
+    if (header && header.parentElement) {
+      header.parentElement.insertBefore(link, header.nextSibling);
+    } else {
+      slot.insertBefore(link, slot.firstChild);
+    }
 
     const sub = sectionHeader.querySelector(".fixture-section__sub");
     if (sub) sub.textContent = describeRenderedCounts(conv, slot);
