@@ -106,16 +106,23 @@ function isSignatureBlock(el: Element): boolean {
   // Long blocks (e.g. body paragraphs) are never signatures.
   if (text.length > 240) return false;
 
-  // A wrapper element containing 3+ meaningful inner paragraphs is a body
-  // block, not a signature. Real signatures are small (one paragraph or a
-  // few short <br>-separated lines). This also catches the case where a
-  // body paragraph happens to mention a phone-like digit run (a path, a
-  // ticket number, a build #).
-  let innerMeaningful = 0;
+  // Count inner paragraphs that look like real body content — substantive
+  // length (> 50 chars) AND don't match signature patterns. Three or more
+  // such paragraphs = body block, not signature. Real signatures have
+  // short lines (name/title/email/phone) so they don't trip this check.
+  let bodyLikeCount = 0;
+  const seen = new Set<string>();
   for (const child of Array.from(el.querySelectorAll("p, div"))) {
     const t = (child.textContent ?? "").trim();
-    if (t.length > 5) innerMeaningful++;
-    if (innerMeaningful >= 3) return false;
+    if (t.length < 50) continue;
+    if (seen.has(t)) continue;
+    seen.add(t);
+    const childSegs = splitByBr(child);
+    if (childSegs.length > 0 && childSegs.every(isSignatureLine)) continue;
+    if (childSegs.length > 0 && childSegs.some((s) => CONTACT_LINE_RE.test(s)))
+      continue;
+    bodyLikeCount++;
+    if (bodyLikeCount >= 3) return false;
   }
 
   const segments = splitByBr(el);
