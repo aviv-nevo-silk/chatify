@@ -20,3 +20,6 @@ dist/
 # Editor
 .vscode/
 .idea/
+
+# AI assistant workspace
+CLAUDE.md
