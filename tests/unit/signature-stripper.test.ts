@@ -88,6 +88,24 @@ describe("stripSignature", () => {
     expect(out).toMatch(/Aviv/);
   });
 
+  it("strips a <table>-wrapped signature (Outlook auto-generated)", () => {
+    // Outlook signatures with a logo column use a table layout.
+    const html =
+      "<div>Hi all, we received a report from Matthew at Sentara.</div>" +
+      "<table><tbody><tr>" +
+      "<td><img src='cid:silk-logo'/></td>" +
+      "<td><p>Efi Sandler</p>" +
+      "<p>Technical Support Manager</p>" +
+      "<p>Silk · <a href='https://support.silk.us'>https://support.silk.us</a> · +1 781 690 6687</p></td>" +
+      "</tr></tbody></table>";
+    const out = stripSignature(html);
+    expect(out).toMatch(/Sentara/);
+    expect(out).not.toMatch(/Efi Sandler/);
+    expect(out).not.toMatch(/Technical Support Manager/);
+    expect(out).not.toMatch(/\+1 781 690 6687/);
+    expect(out).not.toMatch(/support\.silk\.us/);
+  });
+
   it("does NOT strip a single mobile-sig-only message", () => {
     const html = "<p>Get Outlook for iOS</p>";
     expect(stripSignature(html)).toBe(html);

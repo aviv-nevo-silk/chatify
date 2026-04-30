@@ -48,7 +48,11 @@ const CONTACT_LINE_RE = new RegExp(
 const TITLE_KEYWORDS =
   /\b(Manager|Director|Engineer|Lead|Architect|Sales|Marketing|Support|CEO|CTO|CFO|VP|HR|Specialist|Consultant|Officer|President|Founder|Designer|Developer|Analyst|Coordinator|Administrator|Technical|Executive|Senior|Principal|Staff|Associate|Head\s+of)\b/i;
 
-const SIGNATURE_TAGS = new Set(["P", "DIV"]);
+// Signature blocks come wrapped in different tags depending on the mail client:
+//   <p>/<div>  most common (Outlook, Gmail web)
+//   <table>    when the signature uses a 2-column layout (logo + contact)
+//              Outlook's "create signature" UI generates these by default.
+const SIGNATURE_TAGS = new Set(["P", "DIV", "TABLE"]);
 
 export function stripSignature(html: string): string {
   if (!html.trim()) return html;
