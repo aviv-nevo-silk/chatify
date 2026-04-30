@@ -802,3 +802,118 @@ body {
     transition: none !important;
   }
 }
+
+/* AI features (Phase 3) — Summarize chip, setup banner, TL;DR card. */
+
+.ai-actions {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 6px auto 4px;
+  padding: 0 16px;
+  max-width: 720px;
+}
+
+.ai-actions__chip {
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+  color: var(--accent);
+  padding: 6px 12px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 120ms ease;
+}
+
+.ai-actions__chip:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.ai-actions__chip:disabled {
+  opacity: 0.65;
+  cursor: progress;
+}
+
+.ai-actions__banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.ai-actions__banner-text {
+  flex: 1 1 240px;
+}
+
+.ai-actions__banner-link {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ai-actions__banner-link:hover {
+  text-decoration: underline;
+}
+
+.ai-actions__banner-recheck,
+.ai-actions__banner-dismiss {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.ai-actions__banner-dismiss {
+  padding: 2px 7px;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.ai-actions__banner-recheck:hover,
+.ai-actions__banner-dismiss:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ai-summary-card {
+  margin: 4px auto 12px;
+  padding: 12px 16px;
+  max-width: 720px;
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--accent) 10%, rgba(255, 255, 255, 0.02)),
+    color-mix(in srgb, var(--accent) 4%, rgba(255, 255, 255, 0.02))
+  );
+  border: 1px solid color-mix(in srgb, var(--accent) 18%, transparent);
+  border-radius: 14px;
+  color: var(--text-primary);
+}
+
+.ai-summary-card__title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 6px;
+}
+
+.ai-summary-card__body {
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  color: var(--text-primary);
+  min-height: 1.55em;
+}

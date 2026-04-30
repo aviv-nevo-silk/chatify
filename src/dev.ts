@@ -7,6 +7,7 @@
 
 import type { Conversation } from "./types.js";
 import { renderConversation } from "./renderer.js";
+import { mountAiUi } from "./ai-summarize.js";
 
 const STORAGE_KEY = "chatify.lastFixture";
 const LIVE_KEY = "chatify.liveConversation";
@@ -139,6 +140,10 @@ async function loadFixture(name: string): Promise<void> {
     } else {
       slot.insertBefore(link, slot.firstChild);
     }
+
+    // AI features are gated by localStorage.chatify.aiEnabled. Hidden by
+    // default; flip it on in the console to start dogfooding.
+    void mountAiUi(slot);
 
     const sub = sectionHeader.querySelector(".fixture-section__sub");
     if (sub) sub.textContent = describeRenderedCounts(conv, slot);

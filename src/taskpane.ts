@@ -14,6 +14,7 @@
 
 import type { Conversation, EmailAddress, Message } from "./types.js";
 import { renderConversation } from "./renderer.js";
+import { mountAiUi } from "./ai-summarize.js";
 
 // Office.js is loaded by a <script> tag in taskpane.html. Types come from
 // @types/office-js (global namespace via the triple-slash directive above).
@@ -154,6 +155,10 @@ function chatifyCurrent(): void {
     // (avatar + subject + participants) and ABOVE the day-divider/bubbles —
     // mirrors WhatsApp's "in-conversation actions" pattern.
     insertViewerLinkAfterHeader(r);
+
+    // AI features (Summarize chip / setup banner) — gated by localStorage
+    // flag chatify.aiEnabled. No-op when the flag is false.
+    void mountAiUi(r);
 
     // Mirror to localStorage + BroadcastChannel so the full-screen viewer
     // (a separate browser tab on the same origin) can render the same
