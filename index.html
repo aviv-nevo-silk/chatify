@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatify · Outlook add-in that re-renders email threads as chat</title>
+    <link rel="icon" type="image/png" href="./assets/icon-32.png" />
+    <link rel="stylesheet" href="/src/styles/chat.css" />
+    <style>
+      .landing {
+        max-width: 720px;
+        margin: 60px auto;
+        padding: 0 24px 80px;
+        color: var(--text-primary);
+      }
+      .landing h1 {
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -1px;
+        margin: 0 0 12px;
+        background: linear-gradient(
+          135deg,
+          #ffffff 25%,
+          var(--accent-soft) 95%,
+          var(--accent) 100%
+        );
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+      }
+      .landing__lede {
+        color: var(--text-secondary);
+        font-size: 16px;
+        line-height: 1.6;
+        margin: 0 0 24px;
+      }
+      .landing h2 {
+        font-size: 18px;
+        font-weight: 700;
+        margin: 32px 0 12px;
+        color: var(--text-primary);
+      }
+      .landing a {
+        color: var(--accent);
+        text-decoration: none;
+        border-bottom: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+      }
+      .landing a:hover {
+        border-bottom-color: var(--accent);
+      }
+      .landing ul {
+        line-height: 1.8;
+        padding-inline-start: 22px;
+      }
+      .landing__cta {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+        color: var(--accent);
+        padding: 10px 18px;
+        border-radius: var(--radius-pill);
+        font-weight: 600;
+        font-size: 14px;
+        margin-right: 10px;
+        transition: background 120ms ease;
+      }
+      .landing__cta:hover {
+        background: color-mix(in srgb, var(--accent) 22%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+      }
+      code {
+        background: rgba(255, 255, 255, 0.06);
+        padding: 1px 6px;
+        border-radius: 4px;
+        font-family: var(--font-mono);
+        font-size: 13px;
+      }
+      .landing__brand {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 4px;
+      }
+      .landing__brand img {
+        width: 48px;
+        height: 48px;
+      }
+    </style>
+  </head>
+  <body class="dev-body">
+    <main class="landing">
+      <div class="landing__brand">
+        <img src="./assets/icon-64.png" alt="Chatify" />
+      </div>
+      <h1>Chatify</h1>
+      <p class="landing__lede">
+        An Outlook add-in that re-renders an email thread as a WhatsApp-style
+        group chat. Forwarded chains expand into separate bubbles, signatures
+        and meeting boilerplate are stripped, and threads with mixed Hebrew /
+        English render with per-bubble RTL.
+      </p>
+
+      <h2>Try it</h2>
+      <p>
+        <a class="landing__cta" href="./dev.html">↗ Interactive demo</a>
+        <a class="landing__cta" href="./viewer.html">↗ Viewer</a>
+      </p>
+
+      <h2>Install in Outlook</h2>
+      <p>
+        Sideload the manifest at
+        <a href="./manifest.xml"><code>./manifest.xml</code></a>.
+        In Outlook on the Web: <strong>My add-ins → Add a custom add-in →
+        Add from File</strong>, then upload the downloaded
+        <code>manifest.xml</code>. (The "Add from URL" option is disabled
+        on free outlook.com accounts.)
+      </p>
+      <p>
+        For org-wide rollout, an M365 admin can upload the manifest via
+        <strong>Microsoft 365 admin center → Integrated apps → Upload custom
+        apps</strong>. Permission required: <code>ReadItem</code>.
+      </p>
+
+      <h2>What works</h2>
+      <ul>
+        <li>Forwarded-chain expansion — one email with a deep forward becomes N bubbles</li>
+        <li>Group header with avatar, subject, participants</li>
+        <li>Signature, calendar-invite boilerplate, and disclaimer stripping</li>
+        <li>"X added Y to the conversation" inline events at the right moment</li>
+        <li>Per-bubble RTL detection for Hebrew / English mixed threads</li>
+        <li>Inline image rendering (https-hosted attachments)</li>
+        <li>Full-screen viewer mirrors the task pane in a wide browser tab</li>
+      </ul>
+
+      <h2>Source</h2>
+      <p>
+        Open source on GitHub:
+        <a href="https://github.com/aviv-nevo-silk/chatify">aviv-nevo-silk/chatify</a>.
+        Auto-deploys to GitHub Pages on every push to <code>main</code> via
+        the workflow in <code>.github/workflows/deploy.yml</code>.
+      </p>
+    </main>
+  </body>
+</html>

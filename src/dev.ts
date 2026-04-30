@@ -225,6 +225,31 @@ function hasOption(picker: HTMLSelectElement, value: string): boolean {
   return false;
 }
 
+async function pruneUnavailableFixtures(
+  picker: HTMLSelectElement,
+): Promise<void> {
+  // On the deployed site, real-email fixtures (sentara, gil-niv, ...) are
+  // gitignored so they 404 in production. HEAD-probe every fixture URL and
+  // remove options that aren't reachable; remove now-empty optgroups too.
+  const options = Array.from(picker.options).filter(
+    (o) => o.value && o.value !== ALL_VALUE,
+  );
+  const checks = await Promise.allSettled(
+    options.map(async (opt) => {
+      const res = await fetch(fixtureUrl(opt.value), { method: "HEAD" });
+      return { opt, ok: res.ok };
+    }),
+  );
+  for (const c of checks) {
+    if (c.status !== "fulfilled") continue;
+    if (!c.value.ok) c.value.opt.remove();
+  }
+  // Remove empty optgroups left behind.
+  for (const og of Array.from(picker.querySelectorAll("optgroup"))) {
+    if (og.querySelectorAll("option").length === 0) og.remove();
+  }
+}
+
 function init(): void {
   const picker = $<HTMLSelectElement>("fixture-picker");
 
@@ -234,13 +259,16 @@ function init(): void {
     void loadFixture(name);
   });
 
-  const initial = pickInitialFixture(picker);
-  if (initial) {
-    picker.value = initial;
-    void loadFixture(initial);
-  } else {
-    setStatus("Pick a fixture above.");
-  }
+  // Hide unavailable fixtures (real-email JSONs are gitignored in prod build).
+  void pruneUnavailableFixtures(picker).then(() => {
+    const initial = pickInitialFixture(picker);
+    if (initial) {
+      picker.value = initial;
+      void loadFixture(initial);
+    } else {
+      setStatus("Pick a fixture above.");
+    }
+  });
 }
 
 if (document.readyState === "loading") {
