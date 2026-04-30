@@ -57,6 +57,11 @@ export function renderConversation(
       new Date(a.sentDateTime).getTime() - new Date(b.sentDateTime).getTime(),
   );
 
+  // WhatsApp-style group header at the top: avatar, subject as title, and
+  // the participant list as a subtitle. Computed across all virtual messages
+  // so the participants reflect the entire thread.
+  container.appendChild(buildThreadHeader(conversation, sorted));
+
   const today = new Date();
   let prevDate: Date | null = null;
   const currentUserAddr = conversation.currentUser.address.toLowerCase();
@@ -86,6 +91,110 @@ export function renderConversation(
 
     container.appendChild(buildRow(message, currentUserAddr, sentAt));
   }
+}
+
+// ----- thread header (WhatsApp-style: avatar + subject + participants) ----
+
+const AVATAR_GRADIENTS = [
+  "linear-gradient(135deg, #ff286e, #6a4cff)",
+  "linear-gradient(135deg, #25d366, #0a8569)",
+  "linear-gradient(135deg, #53bdeb, #6a4cff)",
+  "linear-gradient(135deg, #ff7b6b, #ffb86b)",
+  "linear-gradient(135deg, #f48fb1, #ff286e)",
+  "linear-gradient(135deg, #06cf9c, #00bfa5)",
+];
+
+function buildThreadHeader(
+  conversation: Conversation,
+  sorted: Message[],
+): HTMLElement {
+  const header = document.createElement("div");
+  header.className = "chat-thread-header";
+
+  const subject = normalizeSubject(threadSubject(conversation, sorted));
+  const initials = computeInitials(subject);
+  const participants = uniqueParticipantFirstNames(conversation, sorted, 6);
+
+  const avatar = document.createElement("div");
+  avatar.className = "chat-thread-header__avatar";
+  avatar.style.setProperty("--avatar-grad", avatarGradientFor(conversation.conversationId));
+  avatar.textContent = initials;
+  header.appendChild(avatar);
+
+  const main = document.createElement("div");
+  main.className = "chat-thread-header__main";
+
+  const title = document.createElement("div");
+  title.className = "chat-thread-header__title";
+  title.textContent = subject || "(no subject)";
+  main.appendChild(title);
+
+  const sub = document.createElement("div");
+  sub.className = "chat-thread-header__sub";
+  sub.textContent = participants.join(", ");
+  main.appendChild(sub);
+
+  header.appendChild(main);
+  return header;
+}
+
+function normalizeSubject(s: string): string {
+  return s.replace(/^\s*((Re|RE|Fw|FW|Fwd):\s*)+/i, "").trim();
+}
+
+function threadSubject(conv: Conversation, sorted: Message[]): string {
+  // Use the OLDEST message's subject as the canonical thread name; that's
+  // the original send (no Re:/Fw: prefixes when normalized).
+  return sorted[0]?.subject ?? conv.messages[0]?.subject ?? "";
+}
+
+function computeInitials(s: string): string {
+  const words = s
+    .split(/\s+/)
+    .map((w) => w.replace(/[^A-Za-z0-9]/g, ""))
+    .filter((w) => w.length > 0);
+  if (words.length === 0) return "?";
+  if (words.length === 1) return words[0]!.slice(0, 2).toUpperCase();
+  return (words[0]![0]! + words[1]![0]!).toUpperCase();
+}
+
+function uniqueParticipantFirstNames(
+  conv: Conversation,
+  sorted: Message[],
+  limit: number,
+): string[] {
+  const seen = new Set<string>();
+  const names: string[] = [];
+  const myAddr = conv.currentUser.address.toLowerCase();
+  const myFirst = firstName(conv.currentUser.name);
+
+  for (const m of sorted) {
+    for (const p of [m.sender, ...m.toRecipients, ...m.ccRecipients]) {
+      const key = p.address.toLowerCase();
+      if (key === myAddr) continue;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      names.push(firstName(p.name));
+    }
+  }
+
+  // Convention: current user appears at the end ("…, Aviv"), like WhatsApp.
+  if (myFirst) names.push(myFirst);
+
+  if (names.length > limit) {
+    return [...names.slice(0, limit - 1), `+${names.length - limit + 1}`];
+  }
+  return names;
+}
+
+function firstName(fullName: string): string {
+  return (fullName.split(/\s+/)[0] ?? fullName).trim() || fullName;
+}
+
+function avatarGradientFor(seed: string): string {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return AVATAR_GRADIENTS[Math.abs(h) % AVATAR_GRADIENTS.length]!;
 }
 
 // ----- system events ------------------------------------------------------
