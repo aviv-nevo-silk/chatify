@@ -26,7 +26,9 @@ function setStatus(text: string, isError = false): void {
 }
 
 function fixtureUrl(name: string): string {
-  return `/tests/fixtures/${name}.json`;
+  // Vite injects BASE_URL: "/" locally, "/chatify/" on Pages. An absolute
+  // "/tests/..." would drop the /chatify/ prefix in production and 404.
+  return `${import.meta.env.BASE_URL}tests/fixtures/${name}.json`;
 }
 
 async function fetchFixture(name: string): Promise<Conversation> {
