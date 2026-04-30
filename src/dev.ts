@@ -63,7 +63,10 @@ function buildViewerLink(): HTMLElement {
   wrap.className = "taskpane-actions";
   const link = document.createElement("a");
   link.className = "taskpane-actions__viewer";
-  link.href = "/viewer.html";
+  // Relative URL so it resolves correctly under both `/` (local dev) and
+  // `/chatify/` (GitHub Pages base path) without needing build-time
+  // substitution.
+  link.href = "viewer.html";
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.textContent = "↗ Open full screen";

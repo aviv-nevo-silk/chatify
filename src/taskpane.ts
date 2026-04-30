@@ -20,7 +20,9 @@ import { renderConversation } from "./renderer.js";
 
 const LIVE_KEY = "chatify.liveConversation";
 const CHANNEL_NAME = "chatify-live";
-const VIEWER_URL = "/viewer.html";
+// Relative URL so it resolves under both `/` (local dev) and `/chatify/`
+// (GitHub Pages) without needing the build to rewrite it.
+const VIEWER_URL = "viewer.html";
 
 // Broadcast updates to any open viewer tabs the moment localStorage changes.
 // More reliable than the `storage` event when the writer is inside a
