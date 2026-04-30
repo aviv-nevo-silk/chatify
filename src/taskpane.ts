@@ -64,6 +64,50 @@ function buildMessage(item: Office.MessageRead, bodyHtml: string): Message {
   };
 }
 
+function buildConversation(
+  item: Office.MessageRead,
+  bodyHtml: string,
+): Conversation {
+  const profile = Office.context.mailbox.userProfile;
+  return {
+    conversationId: item.conversationId ?? "chatify-unknown",
+    currentUser: {
+      name: profile.displayName ?? profile.emailAddress ?? "You",
+      address: profile.emailAddress ?? "",
+    },
+    messages: [buildMessage(item, bodyHtml)],
+  };
+}
+
+function syncLiveConversationToStorage(
+  onComplete?: (success: boolean) => void,
+): void {
+  const item = Office.context.mailbox.item;
+  if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
+    onComplete?.(false);
+    return;
+  }
+  item.body.getAsync(
+    Office.CoercionType.Html,
+    (result: Office.AsyncResult<string>) => {
+      if (result.status !== Office.AsyncResultStatus.Succeeded) {
+        onComplete?.(false);
+        return;
+      }
+      const conversation = buildConversation(
+        item as Office.MessageRead,
+        result.value,
+      );
+      try {
+        localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
+        onComplete?.(true);
+      } catch {
+        onComplete?.(false);
+      }
+    },
+  );
+}
+
 function chatifyCurrent(): void {
   const item = Office.context.mailbox.item;
   if (!item || item.itemType !== Office.MailboxEnums.ItemType.Message) {
@@ -79,15 +123,7 @@ function chatifyCurrent(): void {
       return;
     }
 
-    const profile = Office.context.mailbox.userProfile;
-    const conversation: Conversation = {
-      conversationId: item.conversationId ?? "chatify-unknown",
-      currentUser: {
-        name: profile.displayName ?? profile.emailAddress ?? "You",
-        address: profile.emailAddress ?? "",
-      },
-      messages: [buildMessage(item as Office.MessageRead, result.value)],
-    };
+    const conversation = buildConversation(item as Office.MessageRead, result.value);
 
     const r = root();
     r.replaceChildren();
@@ -127,6 +163,21 @@ function buildViewerLink(): HTMLElement {
   link.target = "_blank";
   link.rel = "noopener noreferrer";
   link.textContent = "↗ Open full screen";
+
+  // On click: open the viewer tab synchronously to preserve the user's
+  // click gesture (avoids popup-blocker), then re-fetch the current
+  // message body and overwrite the live-conversation localStorage entry.
+  // The viewer's storage-event listener picks up the new content and
+  // re-renders. This guarantees the viewer reflects the email currently
+  // open in Outlook even if the task pane was closed when the user
+  // navigated to that email (so chatifyCurrent didn't fire to refresh).
+  link.addEventListener("click", (e) => {
+    e.preventDefault();
+    const newWin = window.open(link.href, "_blank", "noopener,noreferrer");
+    if (!newWin) return; // popup blocked
+    syncLiveConversationToStorage();
+  });
+
   wrap.appendChild(link);
   return wrap;
 }

@@ -88,6 +88,29 @@ describe("stripSignature", () => {
     expect(out).toMatch(/Aviv/);
   });
 
+  it("strips Microsoft Teams meeting boilerplate appended to a body", () => {
+    const html =
+      "<p>Hey,</p>" +
+      "<p>this is a series of meeting talking about interesting features in claude code.</p>" +
+      "<p>regards,<br/>Jameel</p>" +
+      "<div>________________________________</div>" +
+      "<div>Microsoft Teams meeting</div>" +
+      "<div>Join: <a href='https://teams.microsoft.com/meet/315640311796457'>https://teams.microsoft.com/meet/315640311796457</a></div>" +
+      "<div>Meeting ID: 315 640 311 796 457</div>" +
+      "<div>Passcode: Wn7795Qp</div>" +
+      "<div><a href='#'>Need help?</a> | <a href='#'>System reference</a></div>" +
+      "<div>For organizers: <a href='#'>Meeting options</a></div>" +
+      "<div>________________________________</div>";
+    const out = stripSignature(html);
+    expect(out).toMatch(/series of meeting/);
+    expect(out).not.toMatch(/Microsoft Teams meeting/);
+    expect(out).not.toMatch(/Meeting ID/);
+    expect(out).not.toMatch(/Passcode/);
+    expect(out).not.toMatch(/teams\.microsoft\.com/);
+    expect(out).not.toMatch(/regards/);
+    expect(out).not.toMatch(/Jameel/);
+  });
+
   it("strips a <table>-wrapped signature (Outlook auto-generated)", () => {
     // Outlook signatures with a logo column use a table layout.
     const html =

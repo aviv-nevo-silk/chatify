@@ -34,6 +34,28 @@ const MOBILE_SIG = [
   /^השג\s+את\s+outlook/i,
 ];
 
+// Calendar/meeting invite boilerplate. When an email comes from a Teams /
+// Zoom / Meet / WebEx invite, Outlook auto-generates this block. It's
+// noise in a chat view — same as a signature.
+const MEETING_BOILERPLATE = [
+  /microsoft\s+teams\s+meeting/i,
+  /join\s+microsoft\s+teams/i,
+  /^join\s*:/i,
+  /^meeting\s+id\s*:/i,
+  /^passcode\s*:/i,
+  /teams\.microsoft\.com\/(meet|l\/meetup-join)/i,
+  /zoom\.us\/j\//i,
+  /^need\s+help\?/i,
+  /^system\s+reference\s*$/i,
+  /^for\s+organizers\s*:/i,
+  /^meeting\s+options\s*$/i,
+  /meet\.google\.com\//i,
+  /^webex\s+meeting/i,
+];
+
+// Visual separator lines (rows of underscores, dashes, or equals).
+const SEPARATOR_LINE = /^[_\-=*\s]{3,}$/;
+
 const LONE_NAME = /^[A-Z][a-zA-Z'\-]+(\s+[A-Z][a-zA-Z'.\-]+){0,2}$/;
 // Phone patterns require either a `+` country-code prefix OR a separator
 // (space/dash/paren) inside the digit run. This excludes false positives
@@ -135,6 +157,11 @@ function isSignatureBlock(el: Element): boolean {
   // Any line containing a contact (phone/URL/email) is a strong signature signal.
   if (segments.some((s) => CONTACT_LINE_RE.test(s))) return true;
 
+  // Calendar invite boilerplate (Teams, Zoom, etc.) is also stripable.
+  if (segments.some((s) => MEETING_BOILERPLATE.some((r) => r.test(s)))) {
+    return true;
+  }
+
   // Otherwise: every segment must be a salutation, mobile sig, lone name, or title line.
   return segments.every(isSignatureLine);
 }
@@ -142,8 +169,10 @@ function isSignatureBlock(el: Element): boolean {
 function isSignatureLine(s: string): boolean {
   const text = s.trim();
   if (text === "") return true;
+  if (SEPARATOR_LINE.test(text)) return true;
   if (CLOSING_SALUTATIONS.some((r) => r.test(text))) return true;
   if (MOBILE_SIG.some((r) => r.test(text))) return true;
+  if (MEETING_BOILERPLATE.some((r) => r.test(text))) return true;
   if (LONE_NAME.test(text)) return true;
   // Short title-only lines ("Senior Software Engineer", "Technical Support Manager, Americas.").
   if (text.length <= 60 && TITLE_KEYWORDS.test(text)) return true;
