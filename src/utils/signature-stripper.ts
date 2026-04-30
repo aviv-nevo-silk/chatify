@@ -14,17 +14,36 @@
 //   5. Multi-line paragraph where every line is a salutation/name/title
 
 const CLOSING_SALUTATIONS = [
-  /^best\s*[,.\!]?\s*$/i,
-  /^thanks?\s*[,.\!]?\s*$/i,
+  /^best(\s+(regards|wishes))?\s*[,.\!]?\s*$/i,
+  /^thank\s+you(\s+very\s+much)?\s*[,.\!]?\s*$/i,
+  /^thanks?(\s+(again|so\s+much|a\s+lot))?\s*[,.\!]?\s*$/i,
+  /^thanks?\s+in\s+advance\s*[,.\!]?\s*$/i,
   /^regards\s*[,.]?\s*$/i,
   /^kind\s+regards\s*[,.]?\s*$/i,
   /^warm\s+regards\s*[,.]?\s*$/i,
   /^cheers\s*[,.\!]?\s*$/i,
-  /^sincerely\s*[,.]?\s*$/i,
+  /^sincerely(\s+yours)?\s*[,.]?\s*$/i,
+  /^yours(\s+truly)?\s*[,.]?\s*$/i,
   /^thx\s*[,.]?\s*$/i,
   /^br\s*[,.]?\s*$/i,
   /^todah\s*[,.]?\s*$/i,
   /^תודה\s*[,.]?\s*$/i,
+  /^talk\s+(soon|to\s+you\s+soon)\s*[,.\!]?\s*$/i,
+  /^take\s+care\s*[,.\!]?\s*$/i,
+  /^all\s+the\s+best\s*[,.]?\s*$/i,
+  /^much\s+appreciated\s*[,.\!]?\s*$/i,
+  /^appreciated\s*[,.\!]?\s*$/i,
+  /^looking\s+forward\s+to\s+(your\s+)?(reply|response)\s*[,.\!]?\s*$/i,
+];
+
+// Confidentiality / disclaimer footer text that legal departments append.
+const DISCLAIMER = [
+  /confidentiality\s+notice/i,
+  /this\s+(e-?mail|message|communication)\s+(and\s+any\s+attachments?\s+)?(is|are|may\s+be)\s+confidential/i,
+  /privileged\s+and\s+confidential/i,
+  /unauthorized\s+(use|disclosure|distribution|copying|review|dissemination)/i,
+  /^if\s+you\s+(have\s+)?received\s+this\s+(e-?mail|message)/i,
+  /please\s+(notify\s+the\s+sender|destroy\s+the\s+original)/i,
 ];
 
 const MOBILE_SIG = [
@@ -162,6 +181,9 @@ function isSignatureBlock(el: Element): boolean {
     return true;
   }
 
+  // Legal disclaimer / confidentiality footer.
+  if (segments.some((s) => DISCLAIMER.some((r) => r.test(s)))) return true;
+
   // Otherwise: every segment must be a salutation, mobile sig, lone name, or title line.
   return segments.every(isSignatureLine);
 }
@@ -173,6 +195,7 @@ function isSignatureLine(s: string): boolean {
   if (CLOSING_SALUTATIONS.some((r) => r.test(text))) return true;
   if (MOBILE_SIG.some((r) => r.test(text))) return true;
   if (MEETING_BOILERPLATE.some((r) => r.test(text))) return true;
+  if (DISCLAIMER.some((r) => r.test(text))) return true;
   if (LONE_NAME.test(text)) return true;
   // Short title-only lines ("Senior Software Engineer", "Technical Support Manager, Americas.").
   if (text.length <= 60 && TITLE_KEYWORDS.test(text)) return true;

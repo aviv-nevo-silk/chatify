@@ -52,14 +52,21 @@ function installHooks(): void {
     }
   });
 
-  // Strip remote `<img>` tags. Tracking pixels are the most common abuse
-  // vector in email; we only let through `data:` (encoded) and `cid:` (inline
-  // attachment) sources because those don't phone home.
+  // Drop only OBVIOUSLY hostile <img> srcs. Inline (`cid:`, `data:`) and
+  // ordinary https URLs are fine — the user already opened this email in
+  // Outlook, which loaded the same images, so showing them in Chatify
+  // adds no fresh tracking exposure but lets us render screenshots,
+  // diagrams, and signature logos. Block http (mixed content) and
+  // javascript: URIs.
   DOMPurify.addHook("uponSanitizeElement", (node, data) => {
     if (data.tagName !== "img") return;
     if (!(node instanceof Element)) return;
-    const src = node.getAttribute("src") ?? "";
-    const ok = src.startsWith("data:") || src.startsWith("cid:");
+    const src = (node.getAttribute("src") ?? "").trim();
+    const ok =
+      src.startsWith("data:") ||
+      src.startsWith("cid:") ||
+      src.startsWith("https://") ||
+      src.startsWith("//");
     if (!ok) {
       node.parentNode?.removeChild(node);
     }
