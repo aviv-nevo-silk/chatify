@@ -66,8 +66,17 @@ function render(): void {
     return;
   }
 
-  renderConversation(conv, root);
-  const bubbles = root.querySelectorAll(".row").length;
+  // Wrap the rendered chat in a centered slot so it horizontally centers
+  // in the wide viewer. Without the wrapper, .chat-thread-header and .row
+  // children have their own `margin: ... 0 ...` rules (specificity higher
+  // than `.chat-root > * { margin: 0 auto }`) which zero out the auto
+  // margins and pin the chat to the left edge in wide viewports.
+  const slot = document.createElement("div");
+  slot.className = "fixture-section__chat";
+  root.appendChild(slot);
+
+  renderConversation(conv, slot);
+  const bubbles = slot.querySelectorAll(".row").length;
   setStatus(
     `${bubbles} bubble${bubbles === 1 ? "" : "s"} · live (auto-updates)`,
   );
