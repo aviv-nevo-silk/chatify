@@ -18,6 +18,9 @@ import { renderConversation } from "./renderer.js";
 // Office.js is loaded by a <script> tag in taskpane.html. Types come from
 // @types/office-js (global namespace via the triple-slash directive above).
 
+const LIVE_KEY = "chatify.liveConversation";
+const VIEWER_URL = "/viewer.html";
+
 const root = () => document.getElementById("chat-root")!;
 
 function showStatus(text: string, isError = false): void {
@@ -88,8 +91,30 @@ function chatifyCurrent(): void {
 
     const r = root();
     r.replaceChildren();
+    r.appendChild(buildViewerLink());
     renderConversation(conversation, r);
+
+    // Mirror to localStorage so the full-screen viewer (a separate browser
+    // tab on the same origin) can render the same chat at full width.
+    try {
+      localStorage.setItem(LIVE_KEY, JSON.stringify(conversation));
+    } catch {
+      // localStorage may be disabled; the in-pane render still works.
+    }
   });
+}
+
+function buildViewerLink(): HTMLElement {
+  const wrap = document.createElement("div");
+  wrap.className = "taskpane-actions";
+  const link = document.createElement("a");
+  link.className = "taskpane-actions__viewer";
+  link.href = VIEWER_URL;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "↗ Open full screen";
+  wrap.appendChild(link);
+  return wrap;
 }
 
 Office.onReady((info: { host?: Office.HostType; platform?: Office.PlatformType }) => {

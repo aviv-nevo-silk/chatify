@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chatify · Viewer</title>
+    <link rel="stylesheet" href="/src/styles/chat.css" />
+  </head>
+  <body class="dev-body">
+    <header class="dev-header">
+      <div class="dev-header__brand" aria-label="Chatify">
+        <svg class="dev-header__logo" viewBox="0 0 32 32" width="26" height="26" aria-hidden="true">
+          <defs>
+            <linearGradient id="chatify-logo-grad" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#25d366" />
+              <stop offset="100%" stop-color="#0fae8a" />
+            </linearGradient>
+          </defs>
+          <path
+            d="M16 3C8.268 3 2 8.268 2 14.8c0 3.66 1.95 6.92 5.02 9.06L5.6 28.4a.7.7 0 0 0 1.02.78l4.95-2.74A15.7 15.7 0 0 0 16 26.6c7.732 0 14-5.268 14-11.8C30 8.268 23.732 3 16 3z"
+            fill="url(#chatify-logo-grad)"
+          />
+          <path
+            d="M21 11.5c-3.59 0-6.5 2.46-6.5 5.5 0 1.7.93 3.21 2.4 4.21l-.69 2.32a.5.5 0 0 0 .74.55l2.36-1.4c.54.13 1.11.2 1.69.2 3.59 0 6.5-2.46 6.5-5.5s-2.91-5.88-6.5-5.88z"
+            fill="#0b141a"
+            opacity="0.9"
+          />
+        </svg>
+        <span class="dev-header__wordmark">Chatify</span>
+      </div>
+      <span id="dev-status" class="dev-header__status"></span>
+    </header>
+    <main id="chat-root" class="chat-root"></main>
+    <script type="module" src="/src/viewer.ts"></script>
+  </body>
+</html>

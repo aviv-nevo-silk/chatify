@@ -23,6 +23,7 @@ export default defineConfig({
       input: {
         dev: resolve(__dirname, "dev.html"),
         taskpane: resolve(__dirname, "taskpane.html"),
+        viewer: resolve(__dirname, "viewer.html"),
       },
     },
   },
