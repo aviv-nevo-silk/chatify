@@ -37,18 +37,7 @@ function render(): void {
   root.replaceChildren();
 
   if (!conv) {
-    const empty = document.createElement("div");
-    empty.style.padding = "32px";
-    empty.style.color = "#8696a0";
-    empty.style.lineHeight = "1.6";
-    empty.style.maxWidth = "560px";
-    empty.style.margin = "0 auto";
-    empty.innerHTML = `
-      <h2 style="color:#e9edef;font-weight:600;margin-bottom:8px;">No live email yet</h2>
-      <p>Open an email in Outlook and click the <strong>Chatify</strong> task-pane button. This page will then mirror the chat at full browser width.</p>
-      <p style="font-size:13px;margin-top:16px;">Tip: keep this tab open beside Outlook — it auto-updates when you switch messages.</p>
-    `;
-    root.appendChild(empty);
+    root.appendChild(buildEmptyState());
     setStatus("Waiting for the task pane…");
     document.title = "Chatify · Viewer";
     return;
@@ -63,15 +52,48 @@ function render(): void {
   document.title = `Chatify · ${subject}`;
 }
 
+function buildEmptyState(): HTMLElement {
+  const empty = document.createElement("div");
+  empty.style.padding = "32px";
+  empty.style.color = "#8696a0";
+  empty.style.lineHeight = "1.6";
+  empty.style.maxWidth = "560px";
+  empty.style.margin = "0 auto";
+  empty.innerHTML = `
+    <h2 style="color:#e9edef;font-weight:600;margin-bottom:8px;">No live email yet</h2>
+    <p>Open an email in Outlook and click the <strong>Chatify</strong> task-pane button. This page will then mirror the chat at full browser width.</p>
+    <p style="font-size:13px;margin-top:16px;">Tip: keep this tab open beside Outlook — it auto-updates when you switch messages.</p>
+  `;
+  return empty;
+}
+
 function init(): void {
   render();
 
-  // When the task pane (in another tab) writes a new conversation, refresh.
+  // 1. Cross-tab storage events — fires when the task pane (or dev page)
+  //    in another tab writes a new conversation.
+  let lastSerialized = localStorage.getItem(LIVE_KEY);
   window.addEventListener("storage", (e) => {
-    if (e.key === LIVE_KEY) render();
+    if (e.key !== LIVE_KEY) return;
+    lastSerialized = e.newValue;
+    render();
   });
 
-  // Also re-render on tab focus, in case the storage event was missed.
+  // 2. Polling fallback for ~10s after load. Storage events from Outlook's
+  //    sandboxed iframe don't always reach a separate browser tab; poll
+  //    catches the common case where the task pane writes localStorage
+  //    shortly after this tab opens.
+  let polls = 0;
+  const interval = window.setInterval(() => {
+    const current = localStorage.getItem(LIVE_KEY);
+    if (current !== lastSerialized) {
+      lastSerialized = current;
+      render();
+    }
+    if (++polls >= 20) window.clearInterval(interval);
+  }, 500);
+
+  // 3. Re-render on tab focus, in case all of the above missed.
   window.addEventListener("focus", () => render());
 }
 
