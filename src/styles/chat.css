@@ -928,9 +928,53 @@ body {
 .ai-summary-card__body {
   font-size: 14px;
   line-height: 1.55;
-  white-space: pre-wrap;
   color: var(--text-primary);
   min-height: 1.55em;
+}
+
+.ai-summary-card__body p {
+  margin: 0 0 6px;
+}
+
+.ai-summary-card__body p:last-child {
+  margin-bottom: 0;
+}
+
+.ai-summary-card__body ul,
+.ai-summary-card__body ol {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+
+.ai-summary-card__body li {
+  margin: 2px 0;
+}
+
+.ai-summary-card__body strong {
+  color: var(--text-primary);
+  font-weight: 700;
+}
+
+.ai-summary-card__body em {
+  color: var(--text-primary);
+}
+
+.ai-summary-card__body code {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: 12.5px;
+}
+
+.ai-summary-card__body p.md-heading {
+  margin: 8px 0 4px;
+  color: var(--accent);
+  font-size: 13px;
+}
+
+.ai-summary-card__body p.md-heading:first-child {
+  margin-top: 0;
 }
 
 /* AI settings cog + drawer (Phase 3a, option 2.1 — soft discoverability) */

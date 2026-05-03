@@ -14,6 +14,7 @@ import {
   streamChat,
   type Backend,
 } from "./utils/ai-backend.js";
+import { renderMarkdown } from "./utils/markdown.js";
 
 const FEATURE_FLAG_KEY = "chatify.aiEnabled";
 const SETUP_URL =
@@ -367,12 +368,18 @@ async function streamIntoCard(
   const conversationText = collectConversationText(container);
   const currentUser = readCurrentUserName(container);
 
+  // Buffer the streamed text and re-render the body as markdown after each
+  // token. Cheap for summary-sized output and avoids the user seeing raw
+  // ** ** / * ... markup before the model finishes.
+  let buffer = "";
+
   try {
     await streamChat(backend, {
       systemPrompt: cfg.systemPrompt,
       userPrompt: cfg.buildUserPrompt(conversationText, currentUser),
       onToken: (token) => {
-        body.textContent = (body.textContent ?? "") + token;
+        buffer += token;
+        body.innerHTML = renderMarkdown(buffer);
       },
     });
   } catch (err) {
