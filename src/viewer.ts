@@ -5,6 +5,7 @@
 
 import type { Conversation } from "./types.js";
 import { renderConversation } from "./renderer.js";
+import { mountAiUi } from "./ai-summarize.js";
 
 const LIVE_KEY = "chatify.liveConversation";
 const CHANNEL_NAME = "chatify-live";
@@ -76,6 +77,11 @@ function render(): void {
   root.appendChild(slot);
 
   renderConversation(conv, slot);
+
+  // Mount the AI settings cog + Summarize chip on the viewer too — same
+  // surface the dev page and live taskpane use.
+  void mountAiUi(slot);
+
   const bubbles = slot.querySelectorAll(".row").length;
   setStatus(
     `${bubbles} bubble${bubbles === 1 ? "" : "s"} · live (auto-updates)`,
