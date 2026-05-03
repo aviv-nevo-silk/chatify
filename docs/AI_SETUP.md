@@ -1,14 +1,31 @@
 # Enabling AI features (optional, local)
 
-Chatify can summarize email threads using a local LLM via [Ollama](https://ollama.com). Everything runs on your machine — your email content never leaves your computer.
+Chatify can summarize email threads using a local LLM. Everything runs on your machine — your email content never leaves your computer.
+
+There are **two backends**, picked automatically in this order:
+
+1. **Browser-native AI** (Chrome / Edge 138+) — uses Gemini Nano built into the browser. Zero install, no model download (Chrome handles that silently). Smaller model, OK for summarization. **Try this first.**
+2. **Ollama** on `localhost:11434` — better quality, requires a one-time install + ~2 GB model pull. Power-user fallback.
 
 ## What you get
 
-A `🧠 Summarize` chip below the thread header. Click it → Chatify sends the rendered conversation text to your local Ollama instance → the TL;DR streams into a card above the bubbles.
+A `🧠 Summarize` chip below the thread header. Click it → Chatify sends the rendered conversation text to whichever backend is available → the TL;DR streams into a card above the bubbles.
 
-That's it for now. Future ideas (translation chips, action-item extraction, Q&A) layer on the same plumbing.
+Future ideas (translation chips, action-item extraction, Q&A) layer on the same plumbing.
 
-## Install Ollama
+## Path A — Browser-native (Chrome 138+ / Edge)
+
+If you're on a recent Chrome or Edge, you may already have AI built in:
+
+1. Open `chrome://flags` (or `edge://flags`) → search for "Prompt API" → enable.
+2. Open `chrome://components/` → look for "Optimization Guide On Device Model" → click "Check for update". Chrome downloads ~3 GB silently in the background.
+3. Once status shows "ready", reload the Chatify task pane. Chip should appear.
+
+If your Chrome version doesn't expose this yet, skip to Path B.
+
+## Path B — Ollama (any browser, more setup, better quality)
+
+### Install Ollama
 
 **Linux / macOS:**
 

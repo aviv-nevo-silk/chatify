@@ -1,18 +1,19 @@
 // AI Summarize integration. Adds a "🧠 Summarize" chip below the thread
 // header. On click: collects the rendered conversation as plain text, sends
-// it to the user's local Ollama instance, streams the response into a card
-// above the bubbles. If Ollama isn't reachable, shows a small install banner
-// with a Setup link instead.
+// it to whichever AI backend is available (browser-native window.ai first,
+// Ollama on localhost second), streams the response into a card above the
+// bubbles. If no backend is reachable, shows a small install banner with a
+// Setup link instead.
 //
 // Gated behind the localStorage flag `chatify.aiEnabled === "true"` so the
-// feature ships dark and only power users see it.
+// feature ships dark and only opted-in users see it.
 
+import { clearProbeCache } from "./utils/ollama.js";
 import {
-  probeOllama,
+  detectBackend,
   streamChat,
-  clearProbeCache,
-  getOllamaConfig,
-} from "./utils/ollama.js";
+  type Backend,
+} from "./utils/ai-backend.js";
 
 const FEATURE_FLAG_KEY = "chatify.aiEnabled";
 const SETUP_URL =
@@ -28,26 +29,18 @@ export function isAiEnabled(): boolean {
 
 /**
  * Mount AI UI inside `container` (which already contains a rendered
- * conversation). Inserts either a Summarize chip (Ollama reachable, model
- * present) or a setup banner (otherwise), placed right after the thread
- * header so it appears in the same slot as the "Open full screen" link.
+ * conversation). Inserts either a Summarize chip (a backend is ready) or
+ * a setup banner (otherwise), placed right after the thread header.
  */
 export async function mountAiUi(container: HTMLElement): Promise<void> {
   if (!isAiEnabled()) return;
-  const probe = await probeOllama();
+  const info = await detectBackend();
   const wrap = document.createElement("div");
   wrap.className = "ai-actions";
-  if (probe.reachable && probe.models.length > 0) {
-    const cfg = getOllamaConfig();
-    // Use the override model if installed; otherwise fall back to the first
-    // available model. Avoids "model not found" errors if the user pulled
-    // something other than the default.
-    const model = probe.models.includes(cfg.model)
-      ? cfg.model
-      : probe.models[0]!;
-    wrap.appendChild(buildSummarizeChip(container, model));
+  if (info.ready && info.backend) {
+    wrap.appendChild(buildSummarizeChip(container, info.backend, info.label));
   } else {
-    wrap.appendChild(buildSetupBanner());
+    wrap.appendChild(buildSetupBanner(info.label));
   }
   insertAfterThreadHeader(container, wrap);
 }
@@ -66,26 +59,33 @@ function insertAfterThreadHeader(
 
 function buildSummarizeChip(
   container: HTMLElement,
-  model: string,
+  backend: Backend,
+  label: string,
 ): HTMLElement {
   const chip = document.createElement("button");
   chip.type = "button";
   chip.className = "ai-actions__chip";
   chip.textContent = "🧠 Summarize";
-  chip.title = `Summarize this thread using local model: ${model}`;
+  chip.title = `Summarize this thread using ${label}`;
   chip.addEventListener("click", () => {
-    void runSummarize(container, model, chip);
+    void runSummarize(container, backend, chip);
   });
   return chip;
 }
 
-function buildSetupBanner(): HTMLElement {
+function buildSetupBanner(statusLabel: string): HTMLElement {
   const banner = document.createElement("div");
   banner.className = "ai-actions__banner";
 
   const text = document.createElement("span");
   text.className = "ai-actions__banner-text";
-  text.textContent = "💡 AI summaries available — runs locally on your machine.";
+  // If the backend reported a "downloading" or other intermediate state,
+  // show that. Otherwise fall back to the generic "AI summaries available"
+  // message that points the user at setup.
+  text.textContent =
+    statusLabel.includes("download")
+      ? `⏳ ${statusLabel}.`
+      : "💡 AI summaries available — runs locally on your machine.";
 
   const link = document.createElement("a");
   link.className = "ai-actions__banner-link";
@@ -131,13 +131,12 @@ function buildSummaryCard(): HTMLElement {
 
 async function runSummarize(
   container: HTMLElement,
-  model: string,
+  backend: Backend,
   chip: HTMLButtonElement,
 ): Promise<void> {
   chip.disabled = true;
   chip.textContent = "🧠 Summarizing…";
 
-  // If a previous run left a card, replace it instead of stacking.
   const existing = container.querySelector(".ai-summary-card");
   if (existing) existing.remove();
 
@@ -146,30 +145,20 @@ async function runSummarize(
   const body = card.querySelector(".ai-summary-card__body") as HTMLElement;
 
   const conversationText = collectConversationText(container);
-  const cfg = { ...getOllamaConfig(), model };
 
   try {
-    await streamChat(
-      cfg,
-      [
-        {
-          role: "system",
-          content:
-            "You summarize email threads concisely for a busy reader. " +
-            "3–5 short bullet points. Lead with the most important " +
-            "takeaway. Mention people by name when relevant. Skip " +
-            "disclaimers, signatures, and meeting boilerplate. Output " +
-            "plain text — no markdown headers, no preamble.",
-        },
-        {
-          role: "user",
-          content: `Summarize this email thread:\n\n${conversationText}`,
-        },
-      ],
-      (token) => {
+    await streamChat(backend, {
+      systemPrompt:
+        "You summarize email threads concisely for a busy reader. " +
+        "3–5 short bullet points. Lead with the most important takeaway. " +
+        "Mention people by name when relevant. Skip disclaimers, " +
+        "signatures, and meeting boilerplate. Output plain text — no " +
+        "markdown headers, no preamble.",
+      userPrompt: `Summarize this email thread:\n\n${conversationText}`,
+      onToken: (token) => {
         body.textContent = (body.textContent ?? "") + token;
       },
-    );
+    });
   } catch (err) {
     body.textContent = `[Failed: ${err instanceof Error ? err.message : String(err)}]`;
   } finally {

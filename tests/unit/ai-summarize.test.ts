@@ -73,10 +73,20 @@ describe("ai-summarize.mountAiUi", () => {
     localStorage.clear();
     clearProbeCache();
     document.body.innerHTML = "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).LanguageModel;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).ai;
   });
 
   afterEach(() => {
     vi.unstubAllGlobals();
+    // Clear any window.ai globals that another test file may have set —
+    // ai-summarize tests assume Ollama is the only available backend.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).LanguageModel;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    delete (globalThis as any).ai;
   });
 
   it("is a no-op when the feature flag is off", async () => {
