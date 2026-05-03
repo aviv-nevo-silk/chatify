@@ -1,5 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { isAiEnabled, mountAiUi } from "../../src/ai-summarize";
+import {
+  isAiEnabled,
+  mountAiUi,
+  setAiEnabled,
+} from "../../src/ai-summarize";
 import { renderConversation } from "../../src/renderer";
 import { clearProbeCache } from "../../src/utils/ollama";
 import type { Conversation } from "../../src/types";
@@ -50,21 +54,30 @@ function setupContainer(): HTMLElement {
   return container;
 }
 
-describe("ai-summarize.isAiEnabled", () => {
+describe("ai-summarize.isAiEnabled / setAiEnabled", () => {
   beforeEach(() => localStorage.clear());
 
-  it("returns false by default", () => {
-    expect(isAiEnabled()).toBe(false);
-  });
-
-  it("returns true when chatify.aiEnabled === 'true'", () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
+  it("defaults to true when nothing is set", () => {
     expect(isAiEnabled()).toBe(true);
   });
 
-  it("returns false for any other value", () => {
-    localStorage.setItem("chatify.aiEnabled", "1");
+  it("returns false only when explicitly set to 'false'", () => {
+    localStorage.setItem("chatify.aiEnabled", "false");
     expect(isAiEnabled()).toBe(false);
+  });
+
+  it("any other value (including legacy 'true') still means enabled", () => {
+    localStorage.setItem("chatify.aiEnabled", "true");
+    expect(isAiEnabled()).toBe(true);
+    localStorage.setItem("chatify.aiEnabled", "1");
+    expect(isAiEnabled()).toBe(true);
+  });
+
+  it("setAiEnabled(false) writes 'false', setAiEnabled(true) clears the key", () => {
+    setAiEnabled(false);
+    expect(localStorage.getItem("chatify.aiEnabled")).toBe("false");
+    setAiEnabled(true);
+    expect(localStorage.getItem("chatify.aiEnabled")).toBeNull();
   });
 });
 
@@ -81,86 +94,69 @@ describe("ai-summarize.mountAiUi", () => {
 
   afterEach(() => {
     vi.unstubAllGlobals();
-    // Clear any window.ai globals that another test file may have set —
-    // ai-summarize tests assume Ollama is the only available backend.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (globalThis as any).LanguageModel;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     delete (globalThis as any).ai;
+    document.querySelector(".ai-settings-drawer")?.remove();
   });
 
-  it("is a no-op when the feature flag is off", async () => {
-    vi.stubGlobal("fetch", vi.fn());
+  it("always mounts the settings button regardless of state", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("net")));
     const container = setupContainer();
     await mountAiUi(container);
-    expect(container.querySelector(".ai-actions")).toBeNull();
+    expect(
+      container.querySelector(".ai-actions__settings"),
+    ).not.toBeNull();
   });
 
-  it("renders a setup banner when Ollama is unreachable", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockRejectedValue(new Error("network")),
-    );
-    const container = setupContainer();
-    await mountAiUi(container);
-
-    const banner = container.querySelector(".ai-actions__banner");
-    expect(banner).not.toBeNull();
-    expect(container.querySelector(".ai-actions__chip")).toBeNull();
-
-    const link = container.querySelector(".ai-actions__banner-link");
-    expect(link?.getAttribute("href")).toMatch(/AI_SETUP\.md$/);
-  });
-
-  it("renders a setup banner when reachable but no models are installed", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(tagsResponse([])),
-    );
-    const container = setupContainer();
-    await mountAiUi(container);
-
-    expect(container.querySelector(".ai-actions__banner")).not.toBeNull();
-    expect(container.querySelector(".ai-actions__chip")).toBeNull();
-  });
-
-  it("renders the Summarize chip when reachable with at least one model", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
+  it("hides the chip when AI is disabled but keeps the settings button", async () => {
+    localStorage.setItem("chatify.aiEnabled", "false");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
     );
     const container = setupContainer();
     await mountAiUi(container);
+    expect(container.querySelector(".ai-actions__settings")).not.toBeNull();
+    expect(container.querySelector(".ai-actions__chip")).toBeNull();
+  });
 
+  it("hides the chip when no backend is reachable but keeps the settings button", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("net")));
+    const container = setupContainer();
+    await mountAiUi(container);
+    expect(container.querySelector(".ai-actions__settings")).not.toBeNull();
+    expect(container.querySelector(".ai-actions__chip")).toBeNull();
+  });
+
+  it("renders the Summarize chip when AI is on by default and a backend is ready", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const container = setupContainer();
+    await mountAiUi(container);
     const chip = container.querySelector(
       ".ai-actions__chip",
     ) as HTMLButtonElement | null;
     expect(chip).not.toBeNull();
     expect(chip!.textContent).toContain("Summarize");
-    expect(container.querySelector(".ai-actions__banner")).toBeNull();
   });
 
   it("inserts the AI UI right after the thread header", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
     );
     const container = setupContainer();
     await mountAiUi(container);
-
     const header = container.querySelector(".chat-thread-header");
     const actions = container.querySelector(".ai-actions");
-    expect(header).not.toBeNull();
-    expect(actions).not.toBeNull();
     expect(header!.nextElementSibling).toBe(actions);
   });
 
   it("falls back to the first installed model when configured one is missing", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
     localStorage.setItem("chatify.ollamaModel", "not-installed:42b");
     vi.stubGlobal(
       "fetch",
@@ -168,7 +164,6 @@ describe("ai-summarize.mountAiUi", () => {
     );
     const container = setupContainer();
     await mountAiUi(container);
-
     const chip = container.querySelector(
       ".ai-actions__chip",
     ) as HTMLButtonElement;
@@ -176,8 +171,6 @@ describe("ai-summarize.mountAiUi", () => {
   });
 
   it("clicking the Summarize chip streams a TL;DR into a card", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
-
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
       if (url.endsWith("/api/chat"))
@@ -185,30 +178,19 @@ describe("ai-summarize.mountAiUi", () => {
       throw new Error(`unexpected url: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-
     const container = setupContainer();
     await mountAiUi(container);
-
     const chip = container.querySelector(
       ".ai-actions__chip",
     ) as HTMLButtonElement;
     chip.click();
-
-    // Wait one microtask tick for the click handler's async work to complete.
-    // The handler reads the stream, which resolves synchronously here because
-    // our ReadableStream pushes both chunks before close.
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-
-    const card = container.querySelector(".ai-summary-card");
-    expect(card).not.toBeNull();
-    const body = card!.querySelector(".ai-summary-card__body");
+    const body = container.querySelector(".ai-summary-card__body");
     expect(body?.textContent).toContain("Lunch at noon");
   });
 
   it("clicking again replaces the previous summary card instead of stacking", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
-
     let callCount = 0;
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
@@ -219,37 +201,84 @@ describe("ai-summarize.mountAiUi", () => {
       throw new Error(`unexpected url: ${url}`);
     });
     vi.stubGlobal("fetch", fetchMock);
-
     const container = setupContainer();
     await mountAiUi(container);
     const chip = container.querySelector(
       ".ai-actions__chip",
     ) as HTMLButtonElement;
-
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-
     const cards = container.querySelectorAll(".ai-summary-card");
     expect(cards.length).toBe(1);
     expect(cards[0]!.textContent).toContain("call-2");
   });
 
-  it("dismissing the banner removes it from the DOM", async () => {
-    localStorage.setItem("chatify.aiEnabled", "true");
+  it("clicking the settings button opens a drawer with the toggle and status", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const container = setupContainer();
+    await mountAiUi(container);
+    const settings = container.querySelector(
+      ".ai-actions__settings",
+    ) as HTMLButtonElement;
+    settings.click();
+    // Drawer is appended to document.body, not to the container.
+    const drawer = document.querySelector(".ai-settings-drawer");
+    expect(drawer).not.toBeNull();
+    const toggle = drawer!.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
+    expect(toggle).not.toBeNull();
+    expect(toggle.checked).toBe(true); // default state
+    // Status fills async — give it a tick
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const status = drawer!.querySelector(".ai-settings-drawer__status-line");
+    expect(status?.textContent).toContain("Ollama");
+  });
+
+  it("toggling the settings drawer off hides the chip in real time", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const container = setupContainer();
+    await mountAiUi(container);
+    expect(container.querySelector(".ai-actions__chip")).not.toBeNull();
+
+    const settings = container.querySelector(
+      ".ai-actions__settings",
+    ) as HTMLButtonElement;
+    settings.click();
+    const drawer = document.querySelector(".ai-settings-drawer")!;
+    const toggle = drawer.querySelector(
+      "input[type='checkbox']",
+    ) as HTMLInputElement;
+    toggle.checked = false;
+    toggle.dispatchEvent(new Event("change"));
+    // mountAiUi runs async to re-render
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(container.querySelector(".ai-actions__chip")).toBeNull();
+    expect(container.querySelector(".ai-actions__settings")).not.toBeNull();
+  });
+
+  it("clicking settings a second time toggles the drawer closed", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("net")));
     const container = setupContainer();
     await mountAiUi(container);
-
-    const banner = container.querySelector(".ai-actions__banner");
-    expect(banner).not.toBeNull();
-    const dismiss = banner!.querySelector(
-      ".ai-actions__banner-dismiss",
+    const settings = container.querySelector(
+      ".ai-actions__settings",
     ) as HTMLButtonElement;
-    dismiss.click();
-    expect(container.querySelector(".ai-actions__banner")).toBeNull();
+    settings.click();
+    expect(document.querySelector(".ai-settings-drawer")).not.toBeNull();
+    settings.click();
+    expect(document.querySelector(".ai-settings-drawer")).toBeNull();
   });
 });

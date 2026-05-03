@@ -1,12 +1,12 @@
 // AI Summarize integration. Adds a "🧠 Summarize" chip below the thread
-// header. On click: collects the rendered conversation as plain text, sends
-// it to whichever AI backend is available (browser-native window.ai first,
-// Ollama on localhost second), streams the response into a card above the
-// bubbles. If no backend is reachable, shows a small install banner with a
-// Setup link instead.
+// header when an AI backend is reachable, plus a small "⚙ AI" settings
+// button that's always visible. The settings drawer lets users toggle the
+// feature, see backend status, and find the setup guide — replaces the
+// localStorage-only opt-in flag we used during dark-launch.
 //
-// Gated behind the localStorage flag `chatify.aiEnabled === "true"` so the
-// feature ships dark and only opted-in users see it.
+// Default state: AI features are ON for everyone. The chip simply doesn't
+// render if no backend is reachable, so non-AI users see nothing extra
+// beyond the small settings cog.
 
 import { clearProbeCache } from "./utils/ollama.js";
 import {
@@ -19,29 +19,54 @@ const FEATURE_FLAG_KEY = "chatify.aiEnabled";
 const SETUP_URL =
   "https://github.com/aviv-nevo-silk/chatify/blob/main/docs/AI_SETUP.md";
 
+/**
+ * AI features are ON by default. Returns false ONLY when the user has
+ * explicitly disabled them via the settings drawer.
+ */
 export function isAiEnabled(): boolean {
   try {
-    return localStorage.getItem(FEATURE_FLAG_KEY) === "true";
+    return localStorage.getItem(FEATURE_FLAG_KEY) !== "false";
   } catch {
-    return false;
+    return true;
+  }
+}
+
+export function setAiEnabled(enabled: boolean): void {
+  try {
+    if (enabled) {
+      localStorage.removeItem(FEATURE_FLAG_KEY);
+    } else {
+      localStorage.setItem(FEATURE_FLAG_KEY, "false");
+    }
+  } catch {
+    // localStorage may be disabled — silently no-op.
   }
 }
 
 /**
  * Mount AI UI inside `container` (which already contains a rendered
- * conversation). Inserts either a Summarize chip (a backend is ready) or
- * a setup banner (otherwise), placed right after the thread header.
+ * conversation). Always appends the small settings cog. Adds the
+ * Summarize chip alongside it iff AI is enabled and a backend is ready.
  */
 export async function mountAiUi(container: HTMLElement): Promise<void> {
-  if (!isAiEnabled()) return;
-  const info = await detectBackend();
   const wrap = document.createElement("div");
   wrap.className = "ai-actions";
-  if (info.ready && info.backend) {
-    wrap.appendChild(buildSummarizeChip(container, info.backend, info.label));
-  } else {
-    wrap.appendChild(buildSetupBanner(info.label));
+
+  // Always-visible settings cog. Click → drawer with toggle + status +
+  // setup link. This is the discoverability surface for users who don't
+  // yet have AI set up.
+  wrap.appendChild(buildSettingsButton(container));
+
+  // Chip is conditional on the toggle + backend availability.
+  if (isAiEnabled()) {
+    const info = await detectBackend();
+    if (info.ready && info.backend) {
+      wrap.appendChild(
+        buildSummarizeChip(container, info.backend, info.label),
+      );
+    }
   }
+
   insertAfterThreadHeader(container, wrap);
 }
 
@@ -55,6 +80,18 @@ function insertAfterThreadHeader(
   } else {
     container.insertBefore(el, container.firstChild);
   }
+}
+
+function buildSettingsButton(container: HTMLElement): HTMLElement {
+  const btn = document.createElement("button");
+  btn.type = "button";
+  btn.className = "ai-actions__settings";
+  btn.textContent = "⚙ AI";
+  btn.title = "AI summary settings";
+  btn.addEventListener("click", () => {
+    void openSettingsDrawer(container, btn);
+  });
+  return btn;
 }
 
 function buildSummarizeChip(
@@ -73,45 +110,135 @@ function buildSummarizeChip(
   return chip;
 }
 
-function buildSetupBanner(statusLabel: string): HTMLElement {
-  const banner = document.createElement("div");
-  banner.className = "ai-actions__banner";
+async function openSettingsDrawer(
+  container: HTMLElement,
+  trigger: HTMLElement,
+): Promise<void> {
+  // Close any existing drawer (toggle behavior on second click).
+  const existing = document.querySelector(".ai-settings-drawer");
+  if (existing) {
+    existing.remove();
+    return;
+  }
 
-  const text = document.createElement("span");
-  text.className = "ai-actions__banner-text";
-  // If the backend reported a "downloading" or other intermediate state,
-  // show that. Otherwise fall back to the generic "AI summaries available"
-  // message that points the user at setup.
-  text.textContent =
-    statusLabel.includes("download")
-      ? `⏳ ${statusLabel}.`
-      : "💡 AI summaries available — runs locally on your machine.";
+  const drawer = document.createElement("div");
+  drawer.className = "ai-settings-drawer";
+
+  const title = document.createElement("div");
+  title.className = "ai-settings-drawer__title";
+  title.textContent = "AI summaries";
+  drawer.appendChild(title);
+
+  // Toggle.
+  const toggleRow = document.createElement("label");
+  toggleRow.className = "ai-settings-drawer__row";
+  const toggle = document.createElement("input");
+  toggle.type = "checkbox";
+  toggle.checked = isAiEnabled();
+  toggle.addEventListener("change", () => {
+    setAiEnabled(toggle.checked);
+    // Re-mount so the chip appears/disappears in real time.
+    rerenderAiActions(container);
+    // Refresh the drawer's status section too.
+    void refreshStatus(statusContainer);
+  });
+  const toggleLabel = document.createElement("span");
+  toggleLabel.textContent = "Enable AI summaries";
+  toggleRow.append(toggle, toggleLabel);
+  drawer.appendChild(toggleRow);
+
+  // Status (filled async).
+  const statusContainer = document.createElement("div");
+  statusContainer.className = "ai-settings-drawer__status";
+  drawer.appendChild(statusContainer);
+  void refreshStatus(statusContainer);
+
+  // Footer: setup link + re-check + close.
+  const footer = document.createElement("div");
+  footer.className = "ai-settings-drawer__footer";
 
   const link = document.createElement("a");
-  link.className = "ai-actions__banner-link";
+  link.className = "ai-settings-drawer__link";
   link.href = SETUP_URL;
   link.target = "_blank";
   link.rel = "noopener noreferrer";
-  link.textContent = "Setup ↗";
+  link.textContent = "Setup guide ↗";
+  footer.appendChild(link);
 
   const recheck = document.createElement("button");
   recheck.type = "button";
-  recheck.className = "ai-actions__banner-recheck";
+  recheck.className = "ai-settings-drawer__btn";
   recheck.textContent = "Re-check";
-  recheck.addEventListener("click", () => {
+  recheck.addEventListener("click", async () => {
     clearProbeCache();
-    location.reload();
+    await refreshStatus(statusContainer);
+    rerenderAiActions(container);
   });
+  footer.appendChild(recheck);
 
-  const dismiss = document.createElement("button");
-  dismiss.type = "button";
-  dismiss.className = "ai-actions__banner-dismiss";
-  dismiss.setAttribute("aria-label", "Dismiss");
-  dismiss.textContent = "×";
-  dismiss.addEventListener("click", () => banner.remove());
+  drawer.appendChild(footer);
 
-  banner.append(text, link, recheck, dismiss);
-  return banner;
+  // Position the drawer below the trigger button.
+  const rect = trigger.getBoundingClientRect();
+  drawer.style.top = `${rect.bottom + window.scrollY + 6}px`;
+  drawer.style.left = `${rect.left + window.scrollX}px`;
+
+  document.body.appendChild(drawer);
+
+  // Close on outside click.
+  const closeOnOutside = (e: MouseEvent) => {
+    if (!drawer.contains(e.target as Node) && e.target !== trigger) {
+      drawer.remove();
+      document.removeEventListener("mousedown", closeOnOutside);
+    }
+  };
+  // Defer attaching the listener to skip the click that opened the drawer.
+  setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 0);
+}
+
+async function refreshStatus(host: HTMLElement): Promise<void> {
+  host.replaceChildren();
+  if (!isAiEnabled()) {
+    const off = document.createElement("div");
+    off.className = "ai-settings-drawer__status-line";
+    off.textContent = "Disabled.";
+    host.appendChild(off);
+    return;
+  }
+  const loading = document.createElement("div");
+  loading.className = "ai-settings-drawer__status-line";
+  loading.textContent = "Checking…";
+  host.appendChild(loading);
+
+  const info = await detectBackend();
+  host.replaceChildren();
+
+  const line = document.createElement("div");
+  line.className = "ai-settings-drawer__status-line";
+  if (info.ready && info.backend) {
+    line.textContent = `✓ ${info.label}`;
+    line.dataset.state = "ready";
+  } else if (info.label.includes("download")) {
+    line.textContent = `⏳ ${info.label}`;
+    line.dataset.state = "pending";
+  } else {
+    line.textContent = `✗ ${info.label}`;
+    line.dataset.state = "off";
+    const hint = document.createElement("div");
+    hint.className = "ai-settings-drawer__status-hint";
+    hint.textContent =
+      "Try enabling Chrome's Prompt API at chrome://flags, or install Ollama at localhost:11434.";
+    host.appendChild(line);
+    host.appendChild(hint);
+    return;
+  }
+  host.appendChild(line);
+}
+
+function rerenderAiActions(container: HTMLElement): void {
+  const existing = container.querySelector(".ai-actions");
+  if (existing) existing.remove();
+  void mountAiUi(container);
 }
 
 function buildSummaryCard(): HTMLElement {
