@@ -1,12 +1,12 @@
-// AI Summarize integration. Adds a "🧠 Summarize" chip below the thread
-// header when an AI backend is reachable, plus a small "⚙ AI" settings
-// button that's always visible. The settings drawer lets users toggle the
-// feature, see backend status, and find the setup guide — replaces the
-// localStorage-only opt-in flag we used during dark-launch.
+// AI features for Chatify. Adds a settings cog plus one chip per supported
+// "action" (currently summarize + asks-of-you) below the thread header.
+// All actions share the same plumbing: click the chip → chip hides, a card
+// appears, the AI streams into the card. Each card has ↻ (regenerate) and
+// × (dismiss) controls.
 //
-// Default state: AI features are ON for everyone. The chip simply doesn't
-// render if no backend is reachable, so non-AI users see nothing extra
-// beyond the small settings cog.
+// Default state: AI is ON for everyone. The chips simply don't render if
+// no backend is reachable, so non-AI users see nothing extra beyond the
+// small settings cog.
 
 import { clearProbeCache } from "./utils/ollama.js";
 import {
@@ -18,6 +18,57 @@ import {
 const FEATURE_FLAG_KEY = "chatify.aiEnabled";
 const SETUP_URL =
   "https://github.com/aviv-nevo-silk/chatify/blob/main/docs/AI_SETUP.md";
+
+// Each AI action gets a chip + card. Adding a new feature (translate,
+// Q&A, etc.) means appending one entry here — no changes to mount, run,
+// stream, or dismiss code paths.
+type AiAction = "summarize" | "asks";
+
+interface ActionConfig {
+  /** Text on the chip button. */
+  chipLabel: string;
+  /** Tooltip on the chip; receives the backend's friendly name. */
+  chipTitle: (backendLabel: string) => string;
+  /** Header text inside the card. */
+  cardTitle: string;
+  /** System prompt sent to the LLM. */
+  systemPrompt: string;
+  /** User prompt; receives the rendered conversation text + current-user name. */
+  buildUserPrompt: (conversationText: string, currentUserName: string) => string;
+}
+
+const ACTIONS: Record<AiAction, ActionConfig> = {
+  summarize: {
+    chipLabel: "🧠 Summarize",
+    chipTitle: (label) => `Summarize this thread using ${label}`,
+    cardTitle: "🧠 TL;DR",
+    systemPrompt:
+      "You summarize email threads concisely for a busy reader. " +
+      "3–5 short bullet points. Lead with the most important takeaway. " +
+      "Mention people by name when relevant. Skip disclaimers, " +
+      "signatures, and meeting boilerplate. Output plain text — no " +
+      "markdown headers, no preamble.",
+    buildUserPrompt: (text) => `Summarize this email thread:\n\n${text}`,
+  },
+  asks: {
+    chipLabel: "📋 What I owe",
+    chipTitle: (label) =>
+      `Find action items addressed to you using ${label}`,
+    cardTitle: "📋 Asks of you",
+    systemPrompt:
+      "You extract action items from email threads — specifically what " +
+      "is being asked of one named user. Output: a short bulleted list " +
+      "of things THAT USER specifically needs to do, decide, reply to, " +
+      "or hit a deadline on. Each bullet: the action, who asked (if " +
+      "relevant), and the deadline if mentioned. If nothing is asked of " +
+      "this user, output exactly: 'Nothing for you to do.' Skip " +
+      "disclaimers, signatures, and meeting boilerplate. Output plain " +
+      "text — no markdown headers, no preamble.",
+    buildUserPrompt: (text, user) =>
+      `The user's name is "${user}". Find what is specifically being ` +
+      `asked of them in this email thread:\n\n${text}`,
+  },
+};
 
 /**
  * AI features are ON by default. Returns false ONLY when the user has
@@ -45,8 +96,8 @@ export function setAiEnabled(enabled: boolean): void {
 
 /**
  * Mount AI UI inside `container` (which already contains a rendered
- * conversation). Always appends the small settings cog. Adds the
- * Summarize chip alongside it iff AI is enabled and a backend is ready.
+ * conversation). Always appends the small settings cog. Adds one chip
+ * per AI action iff the feature is enabled and a backend is ready.
  */
 export async function mountAiUi(container: HTMLElement): Promise<void> {
   const wrap = document.createElement("div");
@@ -57,13 +108,14 @@ export async function mountAiUi(container: HTMLElement): Promise<void> {
   // yet have AI set up.
   wrap.appendChild(buildSettingsButton(container));
 
-  // Chip is conditional on the toggle + backend availability.
   if (isAiEnabled()) {
     const info = await detectBackend();
     if (info.ready && info.backend) {
-      wrap.appendChild(
-        buildSummarizeChip(container, info.backend, info.label),
-      );
+      for (const action of Object.keys(ACTIONS) as AiAction[]) {
+        wrap.appendChild(
+          buildAiChip(container, info.backend, info.label, action),
+        );
+      }
     }
   }
 
@@ -94,18 +146,21 @@ function buildSettingsButton(container: HTMLElement): HTMLElement {
   return btn;
 }
 
-function buildSummarizeChip(
+function buildAiChip(
   container: HTMLElement,
   backend: Backend,
-  label: string,
+  backendLabel: string,
+  action: AiAction,
 ): HTMLElement {
+  const cfg = ACTIONS[action];
   const chip = document.createElement("button");
   chip.type = "button";
   chip.className = "ai-actions__chip";
-  chip.textContent = "🧠 Summarize";
-  chip.title = `Summarize this thread using ${label}`;
+  chip.dataset.action = action;
+  chip.textContent = cfg.chipLabel;
+  chip.title = cfg.chipTitle(backendLabel);
   chip.addEventListener("click", () => {
-    void runSummarize(container, backend, chip);
+    void runAiAction(container, backend, chip, action);
   });
   return chip;
 }
@@ -126,7 +181,7 @@ async function openSettingsDrawer(
 
   const title = document.createElement("div");
   title.className = "ai-settings-drawer__title";
-  title.textContent = "AI summaries";
+  title.textContent = "AI features";
   drawer.appendChild(title);
 
   // Toggle.
@@ -137,13 +192,11 @@ async function openSettingsDrawer(
   toggle.checked = isAiEnabled();
   toggle.addEventListener("change", () => {
     setAiEnabled(toggle.checked);
-    // Re-mount so the chip appears/disappears in real time.
     rerenderAiActions(container);
-    // Refresh the drawer's status section too.
     void refreshStatus(statusContainer);
   });
   const toggleLabel = document.createElement("span");
-  toggleLabel.textContent = "Enable AI summaries";
+  toggleLabel.textContent = "Enable AI features";
   toggleRow.append(toggle, toggleLabel);
   drawer.appendChild(toggleRow);
 
@@ -185,14 +238,12 @@ async function openSettingsDrawer(
 
   document.body.appendChild(drawer);
 
-  // Close on outside click.
   const closeOnOutside = (e: MouseEvent) => {
     if (!drawer.contains(e.target as Node) && e.target !== trigger) {
       drawer.remove();
       document.removeEventListener("mousedown", closeOnOutside);
     }
   };
-  // Defer attaching the listener to skip the click that opened the drawer.
   setTimeout(() => document.addEventListener("mousedown", closeOnOutside), 0);
 }
 
@@ -241,23 +292,25 @@ function rerenderAiActions(container: HTMLElement): void {
   void mountAiUi(container);
 }
 
-function buildSummaryCard(
+function buildAiCard(
   container: HTMLElement,
   backend: Backend,
   chip: HTMLButtonElement,
+  action: AiAction,
 ): HTMLElement {
+  const cfg = ACTIONS[action];
   const card = document.createElement("div");
   card.className = "ai-summary-card";
+  card.dataset.action = action;
 
   const header = document.createElement("div");
   header.className = "ai-summary-card__header";
 
   const title = document.createElement("div");
   title.className = "ai-summary-card__title";
-  title.textContent = "🧠 TL;DR";
+  title.textContent = cfg.cardTitle;
   header.appendChild(title);
 
-  // Right-aligned actions: regenerate + dismiss.
   const actions = document.createElement("div");
   actions.className = "ai-summary-card__actions";
 
@@ -265,9 +318,9 @@ function buildSummaryCard(
   regen.type = "button";
   regen.className = "ai-summary-card__btn";
   regen.textContent = "↻";
-  regen.title = "Regenerate summary";
+  regen.title = "Regenerate";
   regen.addEventListener("click", () => {
-    void streamIntoCard(card, container, backend);
+    void streamIntoCard(card, container, backend, action);
   });
   actions.appendChild(regen);
 
@@ -276,7 +329,7 @@ function buildSummaryCard(
   dismiss.className = "ai-summary-card__btn";
   dismiss.textContent = "×";
   dismiss.title = "Dismiss";
-  dismiss.setAttribute("aria-label", "Dismiss summary");
+  dismiss.setAttribute("aria-label", "Dismiss");
   dismiss.addEventListener("click", () => {
     card.remove();
     chip.style.display = "";
@@ -297,7 +350,9 @@ async function streamIntoCard(
   card: HTMLElement,
   container: HTMLElement,
   backend: Backend,
+  action: AiAction,
 ): Promise<void> {
+  const cfg = ACTIONS[action];
   const body = card.querySelector(".ai-summary-card__body") as HTMLElement;
   body.textContent = "";
 
@@ -310,16 +365,12 @@ async function streamIntoCard(
   }
 
   const conversationText = collectConversationText(container);
+  const currentUser = readCurrentUserName(container);
 
   try {
     await streamChat(backend, {
-      systemPrompt:
-        "You summarize email threads concisely for a busy reader. " +
-        "3–5 short bullet points. Lead with the most important takeaway. " +
-        "Mention people by name when relevant. Skip disclaimers, " +
-        "signatures, and meeting boilerplate. Output plain text — no " +
-        "markdown headers, no preamble.",
-      userPrompt: `Summarize this email thread:\n\n${conversationText}`,
+      systemPrompt: cfg.systemPrompt,
+      userPrompt: cfg.buildUserPrompt(conversationText, currentUser),
       onToken: (token) => {
         body.textContent = (body.textContent ?? "") + token;
       },
@@ -334,23 +385,33 @@ async function streamIntoCard(
   }
 }
 
-async function runSummarize(
+async function runAiAction(
   container: HTMLElement,
   backend: Backend,
   chip: HTMLButtonElement,
+  action: AiAction,
 ): Promise<void> {
-  // Once the user kicks off a summary the chip is meaningless until they
-  // dismiss the card — hide it and let the card own further interactions
-  // (regenerate via ↻, dismiss via ×).
+  // Hide the chip while its card is showing — meaningful action while a
+  // card exists belongs to the card (regenerate/dismiss), not the chip.
   chip.style.display = "none";
 
-  const existing = container.querySelector(".ai-summary-card");
+  // Remove any existing card OF THIS ACTION (other actions' cards stay).
+  const existing = container.querySelector(
+    `.ai-summary-card[data-action="${action}"]`,
+  );
   if (existing) existing.remove();
 
-  const card = buildSummaryCard(container, backend, chip);
+  const card = buildAiCard(container, backend, chip, action);
   insertAfterThreadHeader(container, card);
 
-  await streamIntoCard(card, container, backend);
+  await streamIntoCard(card, container, backend, action);
+}
+
+function readCurrentUserName(container: HTMLElement): string {
+  const header = container.querySelector(".chat-thread-header") as
+    | HTMLElement
+    | null;
+  return header?.dataset.currentUserName?.trim() || "the user";
 }
 
 function collectConversationText(container: HTMLElement): string {

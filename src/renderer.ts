@@ -110,6 +110,11 @@ function buildThreadHeader(
 ): HTMLElement {
   const header = document.createElement("div");
   header.className = "chat-thread-header";
+  // Expose the current user's identity on the DOM so downstream features
+  // (AI prompts that need to address "you" specifically) can read it
+  // without us having to plumb the Conversation object through every layer.
+  header.dataset.currentUserName = conversation.currentUser.name;
+  header.dataset.currentUserAddress = conversation.currentUser.address;
 
   const subject = normalizeSubject(threadSubject(conversation, sorted));
   const initials = computeInitials(subject);

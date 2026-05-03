@@ -130,18 +130,21 @@ describe("ai-summarize.mountAiUi", () => {
     expect(container.querySelector(".ai-actions__chip")).toBeNull();
   });
 
-  it("renders the Summarize chip when AI is on by default and a backend is ready", async () => {
+  it("renders BOTH action chips (Summarize + Asks) when backend is ready", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
     );
     const container = setupContainer();
     await mountAiUi(container);
-    const chip = container.querySelector(
-      ".ai-actions__chip",
+    const summarize = container.querySelector(
+      ".ai-actions__chip[data-action='summarize']",
     ) as HTMLButtonElement | null;
-    expect(chip).not.toBeNull();
-    expect(chip!.textContent).toContain("Summarize");
+    const asks = container.querySelector(
+      ".ai-actions__chip[data-action='asks']",
+    ) as HTMLButtonElement | null;
+    expect(summarize?.textContent).toContain("Summarize");
+    expect(asks?.textContent).toContain("What I owe");
   });
 
   it("inserts the AI UI right after the thread header", async () => {
@@ -165,7 +168,7 @@ describe("ai-summarize.mountAiUi", () => {
     const container = setupContainer();
     await mountAiUi(container);
     const chip = container.querySelector(
-      ".ai-actions__chip",
+      ".ai-actions__chip[data-action='summarize']",
     ) as HTMLButtonElement;
     expect(chip.title).toContain("qwen2.5:3b");
   });
@@ -181,15 +184,90 @@ describe("ai-summarize.mountAiUi", () => {
     const container = setupContainer();
     await mountAiUi(container);
     const chip = container.querySelector(
-      ".ai-actions__chip",
+      ".ai-actions__chip[data-action='summarize']",
     ) as HTMLButtonElement;
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    const body = container.querySelector(".ai-summary-card__body");
+    const card = container.querySelector(
+      ".ai-summary-card[data-action='summarize']",
+    );
+    expect(card).not.toBeNull();
+    const body = card!.querySelector(".ai-summary-card__body");
     expect(body?.textContent).toContain("Lunch at noon");
-    // Chip should be hidden once the card is rendered.
     expect(chip.style.display).toBe("none");
+  });
+
+  it("clicking the Asks chip sends an action-items prompt addressed to the current user", async () => {
+    let lastChatBody: { messages?: Array<{ content: string }> } | null = null;
+    const fetchMock = vi.fn(async (url: string, init?: RequestInit) => {
+      if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
+      if (url.endsWith("/api/chat")) {
+        lastChatBody = JSON.parse(init?.body as string);
+        return chatStreamResponse("• Reply to Alex by Friday.");
+      }
+      throw new Error(`unexpected url: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const container = setupContainer();
+    await mountAiUi(container);
+    const asks = container.querySelector(
+      ".ai-actions__chip[data-action='asks']",
+    ) as HTMLButtonElement;
+    asks.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const card = container.querySelector(
+      ".ai-summary-card[data-action='asks']",
+    );
+    expect(card).not.toBeNull();
+    expect(card!.querySelector(".ai-summary-card__title")?.textContent).toContain(
+      "Asks of you",
+    );
+    expect(card!.querySelector(".ai-summary-card__body")?.textContent).toContain(
+      "Reply to Alex",
+    );
+    // Prompt was personalized: the user prompt should mention "Tester"
+    // (the test fixture's currentUser.name).
+    const userMsg = lastChatBody!.messages!.find((m) => m.content.includes("Tester"));
+    expect(userMsg).toBeDefined();
+  });
+
+  it("each action's card is independent — opening Asks doesn't dismiss Summarize", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
+      if (url.endsWith("/api/chat")) return chatStreamResponse("ok");
+      throw new Error(`unexpected url: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const container = setupContainer();
+    await mountAiUi(container);
+
+    (
+      container.querySelector(
+        ".ai-actions__chip[data-action='summarize']",
+      ) as HTMLButtonElement
+    ).click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    (
+      container.querySelector(
+        ".ai-actions__chip[data-action='asks']",
+      ) as HTMLButtonElement
+    ).click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    const cards = container.querySelectorAll(".ai-summary-card");
+    expect(cards.length).toBe(2);
+    expect(
+      container.querySelector(".ai-summary-card[data-action='summarize']"),
+    ).not.toBeNull();
+    expect(
+      container.querySelector(".ai-summary-card[data-action='asks']"),
+    ).not.toBeNull();
   });
 
   it("the regenerate button re-streams a fresh summary into the same card", async () => {
@@ -206,20 +284,24 @@ describe("ai-summarize.mountAiUi", () => {
     const container = setupContainer();
     await mountAiUi(container);
     const chip = container.querySelector(
-      ".ai-actions__chip",
+      ".ai-actions__chip[data-action='summarize']",
     ) as HTMLButtonElement;
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    const card = container.querySelector(".ai-summary-card")!;
+    const card = container.querySelector(
+      ".ai-summary-card[data-action='summarize']",
+    )!;
     const regen = card.querySelectorAll(
       ".ai-summary-card__btn",
     )[0] as HTMLButtonElement;
-    expect(regen.title).toBe("Regenerate summary");
+    expect(regen.title).toBe("Regenerate");
     regen.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    const cards = container.querySelectorAll(".ai-summary-card");
+    const cards = container.querySelectorAll(
+      ".ai-summary-card[data-action='summarize']",
+    );
     expect(cards.length).toBe(1);
     expect(cards[0]!.querySelector(".ai-summary-card__body")?.textContent).toBe(
       "call-2",
@@ -236,17 +318,22 @@ describe("ai-summarize.mountAiUi", () => {
     const container = setupContainer();
     await mountAiUi(container);
     const chip = container.querySelector(
-      ".ai-actions__chip",
+      ".ai-actions__chip[data-action='summarize']",
     ) as HTMLButtonElement;
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    const dismiss = container.querySelectorAll(
+    const card = container.querySelector(
+      ".ai-summary-card[data-action='summarize']",
+    )!;
+    const dismiss = card.querySelectorAll(
       ".ai-summary-card__btn",
     )[1] as HTMLButtonElement;
     expect(dismiss.title).toBe("Dismiss");
     dismiss.click();
-    expect(container.querySelector(".ai-summary-card")).toBeNull();
+    expect(
+      container.querySelector(".ai-summary-card[data-action='summarize']"),
+    ).toBeNull();
     expect(chip.style.display).toBe("");
   });
 
