@@ -144,7 +144,7 @@ describe("ai-summarize.mountAiUi", () => {
       ".ai-actions__chip[data-action='asks']",
     ) as HTMLButtonElement | null;
     expect(summarize?.textContent).toContain("Summarize");
-    expect(asks?.textContent).toContain("What I owe");
+    expect(asks?.textContent).toContain("My action items");
   });
 
   it("inserts the AI UI right after the thread header", async () => {
@@ -223,7 +223,7 @@ describe("ai-summarize.mountAiUi", () => {
     );
     expect(card).not.toBeNull();
     expect(card!.querySelector(".ai-summary-card__title")?.textContent).toContain(
-      "Asks of you",
+      "My action items",
     );
     expect(card!.querySelector(".ai-summary-card__body")?.textContent).toContain(
       "Reply to Alex",

@@ -51,10 +51,10 @@ const ACTIONS: Record<AiAction, ActionConfig> = {
     buildUserPrompt: (text) => `Summarize this email thread:\n\n${text}`,
   },
   asks: {
-    chipLabel: "📋 What I owe",
+    chipLabel: "📋 My action items",
     chipTitle: (label) =>
       `Find action items addressed to you using ${label}`,
-    cardTitle: "📋 Asks of you",
+    cardTitle: "📋 My action items",
     systemPrompt:
       "You extract action items from email threads — specifically what " +
       "is being asked of one named user. Output: a short bulleted list " +
