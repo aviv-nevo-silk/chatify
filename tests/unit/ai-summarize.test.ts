@@ -170,7 +170,7 @@ describe("ai-summarize.mountAiUi", () => {
     expect(chip.title).toContain("qwen2.5:3b");
   });
 
-  it("clicking the Summarize chip streams a TL;DR into a card", async () => {
+  it("clicking the Summarize chip streams a TL;DR into a card and hides the chip", async () => {
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
       if (url.endsWith("/api/chat"))
@@ -188,9 +188,11 @@ describe("ai-summarize.mountAiUi", () => {
     await new Promise((r) => setTimeout(r, 0));
     const body = container.querySelector(".ai-summary-card__body");
     expect(body?.textContent).toContain("Lunch at noon");
+    // Chip should be hidden once the card is rendered.
+    expect(chip.style.display).toBe("none");
   });
 
-  it("clicking again replaces the previous summary card instead of stacking", async () => {
+  it("the regenerate button re-streams a fresh summary into the same card", async () => {
     let callCount = 0;
     const fetchMock = vi.fn(async (url: string) => {
       if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
@@ -209,12 +211,43 @@ describe("ai-summarize.mountAiUi", () => {
     chip.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
-    chip.click();
+    const card = container.querySelector(".ai-summary-card")!;
+    const regen = card.querySelectorAll(
+      ".ai-summary-card__btn",
+    )[0] as HTMLButtonElement;
+    expect(regen.title).toBe("Regenerate summary");
+    regen.click();
     await new Promise((r) => setTimeout(r, 0));
     await new Promise((r) => setTimeout(r, 0));
     const cards = container.querySelectorAll(".ai-summary-card");
     expect(cards.length).toBe(1);
-    expect(cards[0]!.textContent).toContain("call-2");
+    expect(cards[0]!.querySelector(".ai-summary-card__body")?.textContent).toBe(
+      "call-2",
+    );
+  });
+
+  it("the dismiss button removes the card and brings the chip back", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.endsWith("/api/tags")) return tagsResponse(["llama3.2:3b"]);
+      if (url.endsWith("/api/chat")) return chatStreamResponse("ok");
+      throw new Error(`unexpected url: ${url}`);
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    const container = setupContainer();
+    await mountAiUi(container);
+    const chip = container.querySelector(
+      ".ai-actions__chip",
+    ) as HTMLButtonElement;
+    chip.click();
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+    const dismiss = container.querySelectorAll(
+      ".ai-summary-card__btn",
+    )[1] as HTMLButtonElement;
+    expect(dismiss.title).toBe("Dismiss");
+    dismiss.click();
+    expect(container.querySelector(".ai-summary-card")).toBeNull();
+    expect(chip.style.display).toBe("");
   });
 
   it("clicking the settings button opens a drawer with the toggle and status", async () => {

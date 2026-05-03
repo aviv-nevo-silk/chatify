@@ -241,35 +241,73 @@ function rerenderAiActions(container: HTMLElement): void {
   void mountAiUi(container);
 }
 
-function buildSummaryCard(): HTMLElement {
+function buildSummaryCard(
+  container: HTMLElement,
+  backend: Backend,
+  chip: HTMLButtonElement,
+): HTMLElement {
   const card = document.createElement("div");
   card.className = "ai-summary-card";
+
+  const header = document.createElement("div");
+  header.className = "ai-summary-card__header";
 
   const title = document.createElement("div");
   title.className = "ai-summary-card__title";
   title.textContent = "🧠 TL;DR";
+  header.appendChild(title);
+
+  // Right-aligned actions: regenerate + dismiss.
+  const actions = document.createElement("div");
+  actions.className = "ai-summary-card__actions";
+
+  const regen = document.createElement("button");
+  regen.type = "button";
+  regen.className = "ai-summary-card__btn";
+  regen.textContent = "↻";
+  regen.title = "Regenerate summary";
+  regen.addEventListener("click", () => {
+    void streamIntoCard(card, container, backend);
+  });
+  actions.appendChild(regen);
+
+  const dismiss = document.createElement("button");
+  dismiss.type = "button";
+  dismiss.className = "ai-summary-card__btn";
+  dismiss.textContent = "×";
+  dismiss.title = "Dismiss";
+  dismiss.setAttribute("aria-label", "Dismiss summary");
+  dismiss.addEventListener("click", () => {
+    card.remove();
+    chip.style.display = "";
+  });
+  actions.appendChild(dismiss);
+
+  header.appendChild(actions);
+  card.appendChild(header);
 
   const body = document.createElement("div");
   body.className = "ai-summary-card__body";
+  card.appendChild(body);
 
-  card.append(title, body);
   return card;
 }
 
-async function runSummarize(
+async function streamIntoCard(
+  card: HTMLElement,
   container: HTMLElement,
   backend: Backend,
-  chip: HTMLButtonElement,
 ): Promise<void> {
-  chip.disabled = true;
-  chip.textContent = "🧠 Summarizing…";
-
-  const existing = container.querySelector(".ai-summary-card");
-  if (existing) existing.remove();
-
-  const card = buildSummaryCard();
-  insertAfterThreadHeader(container, card);
   const body = card.querySelector(".ai-summary-card__body") as HTMLElement;
+  body.textContent = "";
+
+  const regenBtn = card.querySelector(
+    ".ai-summary-card__actions .ai-summary-card__btn",
+  ) as HTMLButtonElement | null;
+  if (regenBtn) {
+    regenBtn.disabled = true;
+    regenBtn.textContent = "…";
+  }
 
   const conversationText = collectConversationText(container);
 
@@ -289,9 +327,30 @@ async function runSummarize(
   } catch (err) {
     body.textContent = `[Failed: ${err instanceof Error ? err.message : String(err)}]`;
   } finally {
-    chip.disabled = false;
-    chip.textContent = "🧠 Summarize";
+    if (regenBtn) {
+      regenBtn.disabled = false;
+      regenBtn.textContent = "↻";
+    }
   }
+}
+
+async function runSummarize(
+  container: HTMLElement,
+  backend: Backend,
+  chip: HTMLButtonElement,
+): Promise<void> {
+  // Once the user kicks off a summary the chip is meaningless until they
+  // dismiss the card — hide it and let the card own further interactions
+  // (regenerate via ↻, dismiss via ×).
+  chip.style.display = "none";
+
+  const existing = container.querySelector(".ai-summary-card");
+  if (existing) existing.remove();
+
+  const card = buildSummaryCard(container, backend, chip);
+  insertAfterThreadHeader(container, card);
+
+  await streamIntoCard(card, container, backend);
 }
 
 function collectConversationText(container: HTMLElement): string {
