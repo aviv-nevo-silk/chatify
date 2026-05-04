@@ -391,7 +391,7 @@ async function streamIntoCard(
   ) as HTMLButtonElement | null;
   if (regenBtn) {
     regenBtn.disabled = true;
-    regenBtn.textContent = "…";
+    setLoading(regenBtn, true);
   }
 
   const conversationText = collectConversationText(container);
@@ -416,8 +416,23 @@ async function streamIntoCard(
   } finally {
     if (regenBtn) {
       regenBtn.disabled = false;
+      setLoading(regenBtn, false);
       regenBtn.textContent = "↻";
     }
+  }
+}
+
+function setLoading(btn: HTMLButtonElement, loading: boolean): void {
+  if (!loading) {
+    btn.classList.remove("ai-summary-card__btn--loading");
+    return;
+  }
+  btn.classList.add("ai-summary-card__btn--loading");
+  btn.textContent = "";
+  for (let i = 0; i < 3; i++) {
+    const dot = document.createElement("span");
+    dot.className = "ai-summary-card__btn-dot";
+    btn.appendChild(dot);
   }
 }
 

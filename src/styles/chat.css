@@ -1172,6 +1172,44 @@ body {
 }
 
 .ai-summary-card__btn:disabled {
-  opacity: 0.5;
+  opacity: 0.7;
   cursor: progress;
+}
+
+.ai-summary-card__btn--loading {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  /* Stop the disabled-state opacity from washing out the dots — they have
+   * their own keyframe-controlled opacity below. */
+  opacity: 1;
+}
+
+.ai-summary-card__btn-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  display: inline-block;
+  animation: chatify-bounce 1s infinite ease-in-out;
+}
+
+.ai-summary-card__btn-dot:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ai-summary-card__btn-dot:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes chatify-bounce {
+  0%, 70%, 100% {
+    transform: translateY(0);
+    opacity: 0.35;
+  }
+  35% {
+    transform: translateY(-3px);
+    opacity: 1;
+  }
 }
