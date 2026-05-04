@@ -389,6 +389,52 @@ describe("ai-summarize.mountAiUi", () => {
     expect(container.querySelector(".ai-actions__settings")).not.toBeNull();
   });
 
+  it("changing the backend select in the drawer pins that backend even when the other is ready", async () => {
+    // window.ai available AND Ollama reachable — auto would pick window.ai.
+    // Setting preference to 'ollama' should make Chatify show Ollama instead.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).LanguageModel = {
+      availability: vi.fn().mockResolvedValue("available"),
+      create: vi.fn().mockResolvedValue({
+        promptStreaming: () => new ReadableStream(),
+      }),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["qwen2.5:3b"])),
+    );
+
+    const container = setupContainer();
+    await mountAiUi(container);
+
+    // Auto: chip should show window.ai in its title.
+    let chip = container.querySelector(
+      ".ai-actions__chip[data-action='summarize']",
+    ) as HTMLButtonElement;
+    expect(chip.title).toContain("Browser AI");
+
+    // Open drawer and switch backend to ollama.
+    (
+      container.querySelector(
+        ".ai-actions__settings",
+      ) as HTMLButtonElement
+    ).click();
+    const select = document.querySelector(
+      ".ai-settings-drawer__select",
+    ) as HTMLSelectElement;
+    expect(select).not.toBeNull();
+    select.value = "ollama";
+    select.dispatchEvent(new Event("change"));
+    await new Promise((r) => setTimeout(r, 0));
+    await new Promise((r) => setTimeout(r, 0));
+
+    // After change, chip tooltip should reflect the Ollama backend.
+    chip = container.querySelector(
+      ".ai-actions__chip[data-action='summarize']",
+    ) as HTMLButtonElement;
+    expect(chip.title).toContain("Ollama");
+  });
+
   it("clicking settings a second time toggles the drawer closed", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("net")));
     const container = setupContainer();

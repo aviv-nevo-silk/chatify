@@ -1030,6 +1030,32 @@ body {
   accent-color: var(--accent);
 }
 
+.ai-settings-drawer__row--select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: default;
+}
+
+.ai-settings-drawer__select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  cursor: pointer;
+  flex: 1 1 auto;
+  max-width: 60%;
+}
+
+.ai-settings-drawer__select:focus {
+  outline: 1px solid color-mix(in srgb, var(--accent) 50%, transparent);
+  outline-offset: 1px;
+}
+
 .ai-settings-drawer__status {
   background: rgba(255, 255, 255, 0.04);
   border-radius: 8px;

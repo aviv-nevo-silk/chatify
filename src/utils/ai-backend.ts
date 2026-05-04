@@ -1,15 +1,18 @@
 // Unified AI backend facade. Detects which provider is available and
-// dispatches chat calls to it. Order of preference:
+// dispatches chat calls to it.
 //
+// Default preference cascade ("auto"):
 //   1. window.ai (Gemini Nano, in-browser, zero install) — preferred when
 //      ready because it's free, private, and one-click for the user.
 //   2. Ollama on localhost — power-user fallback. Better quality but
 //      requires manual install + a 2 GB model pull.
 //   3. None — show a setup banner.
 //
-// Adding more backends (Claude API key, OpenAI, Gemini cloud) just means
-// inserting another probe and dispatch case here without touching the
-// caller in ai-summarize.ts.
+// Users can override the cascade via the settings drawer; the preference
+// is stored in localStorage as "auto" | "window-ai" | "ollama". When set
+// to a specific backend, detectBackend() returns that backend if ready or
+// null+not-ready otherwise — no fallback. This makes "I want to test
+// Ollama specifically" predictable.
 
 import {
   probeOllama,
@@ -19,6 +22,9 @@ import {
 import { probeWindowAi, streamChatWindowAi } from "./window-ai.js";
 
 export type Backend = "window-ai" | "ollama" | null;
+export type BackendPreference = "auto" | "window-ai" | "ollama";
+
+const PREF_KEY = "chatify.aiBackend";
 
 export interface BackendInfo {
   backend: Backend;
@@ -28,7 +34,26 @@ export interface BackendInfo {
   ready: boolean;
 }
 
-export async function detectBackend(): Promise<BackendInfo> {
+export function getBackendPreference(): BackendPreference {
+  try {
+    const v = localStorage.getItem(PREF_KEY);
+    if (v === "window-ai" || v === "ollama") return v;
+  } catch {
+    // ignore
+  }
+  return "auto";
+}
+
+export function setBackendPreference(pref: BackendPreference): void {
+  try {
+    if (pref === "auto") localStorage.removeItem(PREF_KEY);
+    else localStorage.setItem(PREF_KEY, pref);
+  } catch {
+    // ignore
+  }
+}
+
+async function detectWindowAi(): Promise<BackendInfo | null> {
   const wai = await probeWindowAi();
   if (wai.available && wai.status === "ready") {
     return {
@@ -37,7 +62,17 @@ export async function detectBackend(): Promise<BackendInfo> {
       ready: true,
     };
   }
+  if (wai.available && wai.status === "downloading") {
+    return {
+      backend: null,
+      label: "Browser AI is downloading — try again in a minute",
+      ready: false,
+    };
+  }
+  return null;
+}
 
+async function detectOllama(): Promise<BackendInfo | null> {
   const oll = await probeOllama();
   if (oll.reachable && oll.models.length > 0) {
     const cfg = getOllamaConfig();
@@ -50,18 +85,31 @@ export async function detectBackend(): Promise<BackendInfo> {
       ready: true,
     };
   }
+  return null;
+}
 
-  // window.ai is downloading? Surface that as a "not yet" state so the UI
-  // can show a different message ("Browser AI is downloading…") rather
-  // than the install banner.
-  if (wai.available && wai.status === "downloading") {
-    return {
-      backend: null,
-      label: "Browser AI is downloading — try again in a minute",
-      ready: false,
-    };
+export async function detectBackend(): Promise<BackendInfo> {
+  const pref = getBackendPreference();
+
+  if (pref === "window-ai") {
+    const info = await detectWindowAi();
+    return (
+      info ?? { backend: null, label: "Browser AI unavailable", ready: false }
+    );
   }
 
+  if (pref === "ollama") {
+    const info = await detectOllama();
+    return info ?? { backend: null, label: "Ollama unavailable", ready: false };
+  }
+
+  // "auto": prefer window.ai if ready; fall back to Ollama; otherwise the
+  // window.ai-downloading state if applicable, else AI unavailable.
+  const wai = await detectWindowAi();
+  if (wai?.ready) return wai;
+  const oll = await detectOllama();
+  if (oll?.ready) return oll;
+  if (wai && !wai.ready) return wai;
   return { backend: null, label: "AI unavailable", ready: false };
 }
 
@@ -89,8 +137,6 @@ export async function streamChat(
   }
   if (backend === "ollama") {
     const cfg = getOllamaConfig();
-    // Re-probe to find an installed model (in case the user-configured one
-    // was uninstalled since the last detect).
     const oll = await probeOllama();
     const model = oll.models.includes(cfg.model)
       ? cfg.model

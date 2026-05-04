@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { detectBackend, streamChat } from "../../src/utils/ai-backend";
+import {
+  detectBackend,
+  streamChat,
+  getBackendPreference,
+  setBackendPreference,
+} from "../../src/utils/ai-backend";
 import { clearProbeCache } from "../../src/utils/ollama";
 
 const tagsResponse = (models: string[]) =>
@@ -104,6 +109,79 @@ describe("ai-backend.detectBackend", () => {
     );
     const info = await detectBackend();
     expect(info.backend).toBeNull();
+  });
+
+  it("respects preference='window-ai' even when Ollama is also ready", async () => {
+    setBackendPreference("window-ai");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).LanguageModel = {
+      availability: vi.fn().mockResolvedValue("available"),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const info = await detectBackend();
+    expect(info.backend).toBe("window-ai");
+  });
+
+  it("respects preference='ollama' even when window.ai is ready (no auto fallback)", async () => {
+    setBackendPreference("ollama");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).LanguageModel = {
+      availability: vi.fn().mockResolvedValue("available"),
+    };
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const info = await detectBackend();
+    expect(info.backend).toBe("ollama");
+    expect(info.label).toContain("llama3.2:3b");
+  });
+
+  it("preference='ollama' returns 'unavailable' when Ollama is not reachable, no fallback", async () => {
+    setBackendPreference("ollama");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    (globalThis as any).LanguageModel = {
+      availability: vi.fn().mockResolvedValue("available"),
+    };
+    vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("net")));
+    const info = await detectBackend();
+    expect(info.backend).toBeNull();
+    expect(info.label).toContain("Ollama unavailable");
+  });
+
+  it("preference='window-ai' returns 'unavailable' when window.ai is missing, no fallback", async () => {
+    setBackendPreference("window-ai");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(tagsResponse(["llama3.2:3b"])),
+    );
+    const info = await detectBackend();
+    expect(info.backend).toBeNull();
+    expect(info.label).toContain("Browser AI unavailable");
+  });
+});
+
+describe("ai-backend preference helpers", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("defaults to 'auto' when nothing set", () => {
+    expect(getBackendPreference()).toBe("auto");
+  });
+
+  it("setBackendPreference('auto') removes the key", () => {
+    localStorage.setItem("chatify.aiBackend", "ollama");
+    setBackendPreference("auto");
+    expect(localStorage.getItem("chatify.aiBackend")).toBeNull();
+  });
+
+  it("round-trips 'window-ai' and 'ollama'", () => {
+    setBackendPreference("window-ai");
+    expect(getBackendPreference()).toBe("window-ai");
+    setBackendPreference("ollama");
+    expect(getBackendPreference()).toBe("ollama");
   });
 });
 

@@ -12,7 +12,10 @@ import { clearProbeCache } from "./utils/ollama.js";
 import {
   detectBackend,
   streamChat,
+  getBackendPreference,
+  setBackendPreference,
   type Backend,
+  type BackendPreference,
 } from "./utils/ai-backend.js";
 import { renderMarkdown } from "./utils/markdown.js";
 
@@ -200,6 +203,32 @@ async function openSettingsDrawer(
   toggleLabel.textContent = "Enable AI features";
   toggleRow.append(toggle, toggleLabel);
   drawer.appendChild(toggleRow);
+
+  // Backend preference selector.
+  const backendRow = document.createElement("label");
+  backendRow.className = "ai-settings-drawer__row ai-settings-drawer__row--select";
+  const backendLabel = document.createElement("span");
+  backendLabel.textContent = "Backend";
+  const backendSelect = document.createElement("select");
+  backendSelect.className = "ai-settings-drawer__select";
+  for (const [value, label] of [
+    ["auto", "Auto (prefer Browser AI)"],
+    ["window-ai", "Browser AI (Gemini Nano)"],
+    ["ollama", "Ollama (localhost)"],
+  ] as Array<[BackendPreference, string]>) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    backendSelect.appendChild(opt);
+  }
+  backendSelect.value = getBackendPreference();
+  backendSelect.addEventListener("change", () => {
+    setBackendPreference(backendSelect.value as BackendPreference);
+    rerenderAiActions(container);
+    void refreshStatus(statusContainer);
+  });
+  backendRow.append(backendLabel, backendSelect);
+  drawer.appendChild(backendRow);
 
   // Status (filled async).
   const statusContainer = document.createElement("div");
