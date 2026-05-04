@@ -6,10 +6,10 @@
            xsi:type="MailApp">
   <Id>1e5408ca-77d3-4fb5-9e71-294d747396b3</Id>
   <Version>0.1.1.0</Version>
-  <ProviderName>Chatify</ProviderName>
+  <ProviderName>Aviv Nevo</ProviderName>
   <DefaultLocale>en-US</DefaultLocale>
   <DisplayName DefaultValue="Chatify" />
-  <Description DefaultValue="Re-render an email thread as a WhatsApp-style chat." />
+  <Description DefaultValue="Re-renders email threads as a WhatsApp-style chat. Forwarded chains expand into separate bubbles, signatures and meeting boilerplate are stripped, and mixed-language threads render with per-bubble RTL detection. Optional local-LLM summaries via Chrome's built-in AI or Ollama. 100% client-side — your email never leaves your machine." />
   <IconUrl DefaultValue="https://localhost:3001/assets/icon-32.png"/>
   <HighResolutionIconUrl DefaultValue="https://localhost:3001/assets/icon-64.png"/>
   <SupportUrl DefaultValue="https://localhost:3001"/>
