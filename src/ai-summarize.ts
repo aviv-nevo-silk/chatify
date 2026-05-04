@@ -397,10 +397,22 @@ async function streamIntoCard(
   const conversationText = collectConversationText(container);
   const currentUser = readCurrentUserName(container);
 
-  // Buffer the streamed text and re-render the body as markdown after each
-  // token. Cheap for summary-sized output and avoids the user seeing raw
-  // ** ** / * ... markup before the model finishes.
+  // Buffer the streamed text. We re-render the markdown into the card body
+  // at most once per animation frame — without this throttle, a fast stream
+  // (~60 tokens/sec) calls body.innerHTML = renderMarkdown(buffer) sixty
+  // times a second on the *whole accumulated buffer*, which can lock up
+  // the main thread on long summaries.
   let buffer = "";
+  let frameQueued = false;
+
+  const queueRender = (): void => {
+    if (frameQueued) return;
+    frameQueued = true;
+    requestAnimationFrame(() => {
+      frameQueued = false;
+      body.innerHTML = renderMarkdown(buffer);
+    });
+  };
 
   try {
     await streamChat(backend, {
@@ -408,9 +420,12 @@ async function streamIntoCard(
       userPrompt: cfg.buildUserPrompt(conversationText, currentUser),
       onToken: (token) => {
         buffer += token;
-        body.innerHTML = renderMarkdown(buffer);
+        queueRender();
       },
     });
+    // Final flush after the stream ends, in case the last queued frame was
+    // skipped (e.g. tab switched away).
+    body.innerHTML = renderMarkdown(buffer);
   } catch (err) {
     body.textContent = `[Failed: ${err instanceof Error ? err.message : String(err)}]`;
   } finally {
