@@ -1049,6 +1049,17 @@ body {
   cursor: pointer;
   flex: 1 1 auto;
   max-width: 60%;
+  /* Tells the browser to render the popup option list with dark-mode
+   * defaults so the open dropdown isn't a flash of white. */
+  color-scheme: dark;
+}
+
+/* Most browsers ignore most styling on <option>, but background + color
+ * are honored on Chrome/Edge/Firefox. Belt-and-suspenders for color-scheme
+ * — if a browser ignores color-scheme we still render dark options. */
+.ai-settings-drawer__select option {
+  background: #1c2731;
+  color: var(--text-primary);
 }
 
 .ai-settings-drawer__select:focus {
